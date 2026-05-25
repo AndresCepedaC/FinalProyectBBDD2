@@ -1,0 +1,131 @@
+-- =====================================================
+-- QUINDIOFLIX - SCRIPT DE USUARIOS Y ROLES (NUCLEO 5)
+-- Proyecto Final - Bases de Datos II
+-- =====================================================
+
+-- NOTA: Este script debe ser ejecutado por el usuario SYSTEM o SYSDBA
+
+-- =====================================================
+-- 1. Crear Perfil de Seguridad (PROFILE)
+-- =====================================================
+-- Limita recursos para usuarios del sistema
+CREATE PROFILE PERFIL_QUINDIOFLIX LIMIT
+    SESSIONS_PER_USER 5          -- Maximo 5 sesiones concurrentes
+    IDLE_TIME 30                 -- Desconexion tras 30 min inactividad
+    FAILED_LOGIN_ATTEMPTS 3      -- Bloqueo tras 3 intentos fallidos
+    PASSWORD_LOCK_TIME 1         -- Bloqueo dura 1 dia
+    PASSWORD_LIFE_TIME 90;       -- Renovar contrasena cada 90 dias
+
+-- =====================================================
+-- 2. Crear Roles (minimo 3)
+-- =====================================================
+
+-- Rol Administrador Total
+CREATE ROLE ROL_ADMIN;
+
+-- Rol Analista de Datos/Gerencia
+CREATE ROLE ROL_ANALISTA;
+
+-- Rol Soporte al Cliente
+CREATE ROLE ROL_SOPORTE;
+
+-- Rol Gestor de Contenido
+CREATE ROLE ROL_CONTENIDO;
+
+-- =====================================================
+-- 3. Asignar Privilegios a los Roles
+-- Asumiendo que el propietario de las tablas es "QUINDIOFLIX_OWNER"
+-- (Reemplace USER por el esquema propietario si se ejecuta desde system)
+-- =====================================================
+
+-- Privilegios ROL_ADMIN (CRUD Total + Ejecucion)
+GRANT SELECT, INSERT, UPDATE, DELETE ON PLANES TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON USUARIOS TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON PERFILES TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON CONTENIDO TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON CATEGORIAS TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON GENEROS TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON PAGOS TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON REPRODUCCIONES TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON EMPLEADOS TO ROL_ADMIN;
+GRANT SELECT, INSERT, UPDATE, DELETE ON REPORTES TO ROL_ADMIN;
+-- ... y asi para el resto de tablas
+
+GRANT EXECUTE ON SP_REGISTRAR_USUARIO TO ROL_ADMIN;
+GRANT EXECUTE ON SP_CAMBIAR_PLAN TO ROL_ADMIN;
+
+-- Privilegios ROL_ANALISTA (Solo Lectura y Reportes)
+GRANT SELECT ON USUARIOS TO ROL_ANALISTA;
+GRANT SELECT ON PLANES TO ROL_ANALISTA;
+GRANT SELECT ON CIUDADES TO ROL_ANALISTA;
+GRANT SELECT ON PAGOS TO ROL_ANALISTA;
+GRANT SELECT ON REPRODUCCIONES TO ROL_ANALISTA;
+GRANT SELECT ON MV_INGRESOS_MENSUALES TO ROL_ANALISTA;
+GRANT SELECT ON MV_CONTENIDO_POPULAR TO ROL_ANALISTA;
+GRANT EXECUTE ON SP_REPORTE_CONSUMO TO ROL_ANALISTA;
+
+-- Privilegios ROL_SOPORTE (Atencion al Cliente)
+GRANT SELECT ON USUARIOS TO ROL_SOPORTE;
+GRANT SELECT ON PERFILES TO ROL_SOPORTE;
+GRANT SELECT, INSERT, UPDATE ON PAGOS TO ROL_SOPORTE;
+GRANT SELECT, UPDATE ON REPORTES TO ROL_SOPORTE;
+GRANT EXECUTE ON SP_CAMBIAR_PLAN TO ROL_SOPORTE;
+-- No puede borrar pagos, ni crear/borrar usuarios
+
+-- Privilegios ROL_CONTENIDO (Gestion del catalogo)
+GRANT SELECT, INSERT, UPDATE, DELETE ON CONTENIDO TO ROL_CONTENIDO;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TEMPORADAS TO ROL_CONTENIDO;
+GRANT SELECT, INSERT, UPDATE, DELETE ON EPISODIOS TO ROL_CONTENIDO;
+GRANT SELECT, INSERT, UPDATE, DELETE ON GENEROS TO ROL_CONTENIDO;
+GRANT SELECT, INSERT, UPDATE, DELETE ON CATEGORIAS TO ROL_CONTENIDO;
+GRANT SELECT ON REPRODUCCIONES TO ROL_CONTENIDO; -- Solo lectura para ver metricas
+GRANT SELECT ON CALIFICACIONES TO ROL_CONTENIDO; -- Solo lectura
+
+-- =====================================================
+-- 4. Crear Usuarios y Asignar Roles y Perfiles
+-- =====================================================
+
+-- Administrador
+CREATE USER USR_ADMIN IDENTIFIED BY Admin123QFlix PROFILE PERFIL_QUINDIOFLIX;
+GRANT CREATE SESSION TO USR_ADMIN;
+GRANT ROL_ADMIN TO USR_ADMIN;
+
+-- Analista
+CREATE USER USR_ANALISTA IDENTIFIED BY Ana123QFlix PROFILE PERFIL_QUINDIOFLIX;
+GRANT CREATE SESSION TO USR_ANALISTA;
+GRANT ROL_ANALISTA TO USR_ANALISTA;
+
+-- Soporte
+CREATE USER USR_SOPORTE IDENTIFIED BY Sop123QFlix PROFILE PERFIL_QUINDIOFLIX;
+GRANT CREATE SESSION TO USR_SOPORTE;
+GRANT ROL_SOPORTE TO USR_SOPORTE;
+
+-- Contenido
+CREATE USER USR_CONTENIDO IDENTIFIED BY Con123QFlix PROFILE PERFIL_QUINDIOFLIX;
+GRANT CREATE SESSION TO USR_CONTENIDO;
+GRANT ROL_CONTENIDO TO USR_CONTENIDO;
+
+-- =====================================================
+-- 5. Demostracion de Restriccion de Acceso
+-- =====================================================
+/*
+-- INSTRUCCIONES PARA LA SUSTENTACION:
+
+-- 1. Conectarse como USR_SOPORTE
+-- CONNECT USR_SOPORTE/Sop123QFlix
+
+-- 2. Intentar operacion PERMITIDA (Ver usuarios y pagos)
+-- SELECT * FROM QUINDIOFLIX_OWNER.USUARIOS WHERE ROWNUM <= 5;
+-- (Debe mostrar los datos)
+
+-- 3. Intentar operacion NO PERMITIDA (Modificar contenido o borrar pago)
+-- DELETE FROM QUINDIOFLIX_OWNER.CONTENIDO WHERE id_contenido = 1;
+-- ORA-01031: insufficient privileges (Privilegios insuficientes)
+
+-- 4. Conectarse como USR_ANALISTA
+-- CONNECT USR_ANALISTA/Ana123QFlix
+
+-- 5. Intentar operacion NO PERMITIDA (Insertar usuario)
+-- INSERT INTO QUINDIOFLIX_OWNER.CIUDADES VALUES (99, 'Test');
+-- ORA-01031: insufficient privileges
+*/
