@@ -1,9 +1,6 @@
 package com.quindioflix.model.base;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.MappedSuperclass;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -28,4 +25,4 @@ public abstract class BaseEntity {
     private LocalDateTime fechaModificacion;
 }
 
-}
+

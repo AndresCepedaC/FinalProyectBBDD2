@@ -20,6 +20,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // Endpoints publicos de registro/login
                 .requestMatchers("/api/public/**").permitAll() // Catalogo publico
+                .requestMatchers("/api/contenidos/**").permitAll() // Catalogo publico (GET /api/contenidos y detalle)
+                .requestMatchers("/api/contenidos").permitAll()
                 .anyRequest().authenticated() // Resto requiere autenticacion
             )
             .httpBasic(AbstractHttpConfigurer::disable);

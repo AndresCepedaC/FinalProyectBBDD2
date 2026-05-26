@@ -1,6 +1,7 @@
 package com.quindioflix.controller;
 
 import com.quindioflix.dto.RegistroUsuarioDTO;
+import com.quindioflix.dto.UsuarioPublicoDTO;
 import com.quindioflix.model.Usuario;
 import com.quindioflix.service.UsuarioService;
 import jakarta.validation.Valid;
@@ -19,7 +20,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
-    public ResponseEntity<?> registrarUsuario(@Valid @RequestBody RegistroUsuarioDTO dto) {
+    public ResponseEntity<UsuarioPublicoDTO> registrarUsuario(@Valid @RequestBody RegistroUsuarioDTO dto) {
         
         Usuario nuevoUsuario = new Usuario();
         nuevoUsuario.setNombreCompleto(dto.getNombreCompleto());
@@ -32,7 +33,16 @@ public class AuthController {
         nuevoUsuario.setContrasenaHash(passwordEncoder.encode(dto.getContrasena()));
         
         Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, dto.getIdPlan());
+
+        UsuarioPublicoDTO out = UsuarioPublicoDTO.builder()
+                .id(usuarioGuardado.getId())
+                .nombreCompleto(usuarioGuardado.getNombreCompleto())
+                .email(usuarioGuardado.getEmail())
+                .idCiudad(usuarioGuardado.getIdCiudad())
+                .estadoCuenta(usuarioGuardado.getEstadoCuenta())
+                .plan(usuarioGuardado.getPlan() != null ? usuarioGuardado.getPlan().getNombrePlan() : null)
+                .build();
         
-        return new ResponseEntity<>(usuarioGuardado, HttpStatus.CREATED);
+        return new ResponseEntity<>(out, HttpStatus.CREATED);
     }
 }

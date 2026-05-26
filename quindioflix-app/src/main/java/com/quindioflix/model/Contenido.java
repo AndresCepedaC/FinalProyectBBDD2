@@ -1,5 +1,6 @@
 package com.quindioflix.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.quindioflix.model.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -28,10 +29,12 @@ public class Contenido extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_categoria", nullable = false)
+    @JsonIgnore
     private Categoria categoria;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_empleado_publicador")
+    @JsonIgnore
     private Empleado publicador;
 
     @Column(name = "titulo", nullable = false, length = 150)
@@ -64,6 +67,7 @@ public class Contenido extends BaseEntity {
         joinColumns = @JoinColumn(name = "id_contenido"),
         inverseJoinColumns = @JoinColumn(name = "id_genero")
     )
+    @JsonIgnore
     @Builder.Default
     private Set<Genero> generos = new HashSet<>();
 }

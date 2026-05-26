@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuindioFlix - Interfaz</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>QuindioFlix</h1>
+    <p class="subtitle">Interfaz funcional de demo</p>
+    <nav class="tabs">
+      <button class="tab active" data-page="catalogo">Catálogo</button>
+      <button class="tab" data-page="registro">Registro</button>
+      <button class="tab" data-page="usuarios">Usuarios</button>
+      <button class="tab" data-page="reportes">Reportes</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="panel" data-section="registro" style="display:none;">
+      <h2>Registro</h2>
+      <form id="registerForm" class="form-grid">
+        <label>
+          Nombre completo
+          <input id="nombreCompleto" name="nombreCompleto" required minlength="3" maxlength="150" />
+        </label>
+
+        <label>
+          Email
+          <input id="email" name="email" type="email" required />
+        </label>
+
+        <label>
+          Contraseña
+          <input id="contrasena" name="contrasena" type="password" required minlength="6" />
+        </label>
+
+        <label>
+          Teléfono (opcional)
+          <input id="telefono" name="telefono" />
+        </label>
+
+        <label>
+          Fecha de nacimiento
+          <input id="fechaNacimiento" name="fechaNacimiento" type="date" required />
+        </label>
+
+        <label>
+          Ciudad
+          <select id="idCiudad" name="idCiudad" required></select>
+        </label>
+
+        <label>
+          Plan
+          <select id="idPlan" name="idPlan" required></select>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit">Crear cuenta</button>
+        </div>
+      </form>
+
+      <div id="registerMsg" class="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" data-section="catalogo">
+      <div class="panel-head">
+        <h2>Catálogo</h2>
+        <div class="toolbar">
+          <label>
+            Página
+            <input id="page" type="number" value="0" min="0" />
+          </label>
+          <label>
+            Tamaño
+            <input id="size" type="number" value="10" min="1" />
+          </label>
+          <label>
+            Orden
+            <select id="sortBy">
+              <option value="popularidad" selected>popularidad</option>
+              <option value="anoLanzamiento">anoLanzamiento</option>
+              <option value="titulo">titulo</option>
+            </select>
+          </label>
+          <button id="loadCatalogBtn" class="secondary">Cargar</button>
+        </div>
+      </div>
+
+      <div id="catalogMeta" class="muted" style="margin-bottom:10px;"></div>
+      <div id="catalog" class="grid"></div>
+    </section>
+
+    <section id="detailPanel" class="panel panel-detail" style="display:none;">
+      <h2>Detalle</h2>
+      <pre id="detailJson" class="detail-json"></pre>
+      <button id="closeDetailBtn" class="secondary">Cerrar</button>
+    </section>
+
+    <section class="panel" data-section="usuarios" style="display:none;">
+      <h2>Usuarios (resumen)</h2>
+      <div class="toolbar">
+        <label>
+          ID de usuario
+          <input id="usuarioId" type="number" min="1" value="1" />
+        </label>
+        <label>
+          Nuevo plan (ID)
+          <input id="nuevoPlanId" type="number" min="1" value="1" />
+        </label>
+        <button id="loadUserBtn" class="secondary">Cargar usuario</button>
+        <button id="changePlanBtn">Cambiar plan</button>
+      </div>
+      <div id="userSummary" class="detail-json" style="margin-top:12px; min-height:80px;"></div>
+      <div id="userPagos" class="detail-json" style="margin-top:12px; min-height:80px;"></div>
+    </section>
+
+    <section class="panel" data-section="reportes" style="display:none;">
+      <div class="panel-head">
+        <h2>Reportes (vistas materializadas)</h2>
+        <div class="toolbar">
+          <label>
+            Top (contenido popular)
+            <input id="topLimit" type="number" min="1" max="100" value="10" />
+          </label>
+          <label>
+            Año
+            <input id="repAnio" type="number" min="2000" max="2100" placeholder="(opcional)" />
+          </label>
+          <label>
+            Mes
+            <input id="repMes" type="number" min="1" max="12" placeholder="(opcional)" />
+          </label>
+          <button id="loadReportsBtn" class="secondary">Cargar</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top:8px;">Contenido popular (MV_CONTENIDO_POPULAR)</h3>
+      <div id="repPopular" class="detail-json" style="min-height:80px;"></div>
+
+      <h3 style="margin-top:12px;">Ingresos mensuales (MV_INGRESOS_MENSUALES)</h3>
+      <div id="repIngresos" class="detail-json" style="min-height:80px;"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
