@@ -153,6 +153,26 @@ ORDER BY categoria, ciudad;
 -- 3.1.4 Vistas materializadas
 -- =====================================================
 
+BEGIN
+    EXECUTE IMMEDIATE 'DROP MATERIALIZED VIEW MV_CONTENIDO_POPULAR';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE NOT IN (-12003, -942) THEN
+            RAISE;
+        END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP MATERIALIZED VIEW MV_INGRESOS_MENSUALES';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE NOT IN (-12003, -942) THEN
+            RAISE;
+        END IF;
+END;
+/
+
 -- a) Vista materializada: Total reproducciones y calificacion por contenido
 -- Sirve como base para reportes rapidos de popularidad
 CREATE MATERIALIZED VIEW MV_CONTENIDO_POPULAR
@@ -190,35 +210,58 @@ GROUP BY ci.nombre_ciudad, pl.nombre_plan, EXTRACT(YEAR FROM pa.fecha_pago), EXT
 -- 3.1.5 Fragmentacion de tablas (Particionamiento)
 -- =====================================================
 
--- Nota: Esta seccion requiere permisos de creacion de tablespaces, 
--- lo cual asume un usuario con privilegios DBA. 
--- El script original creo REPRODUCCIONES sin particiones por simplicidad, 
--- pero aqui mostramos como seria el comando de creacion con fragmentacion:
+-- Tabla de demostracion particionada por rango de fechas.
+-- Modela el archivado de reproducciones sin alterar la tabla principal.
+PROMPT 'Creando tabla particionada REPRODUCCIONES_ARCHIVO (fragmentacion por fecha)';
 
-/*
-CREATE TABLESPACE TBS_REPROD_2024 DATAFILE 'reprod_2024.dbf' SIZE 100M AUTOEXTEND ON;
-CREATE TABLESPACE TBS_REPROD_2025 DATAFILE 'reprod_2025.dbf' SIZE 100M AUTOEXTEND ON;
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE REPRODUCCIONES_ARCHIVO PURGE';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN
+            RAISE;
+        END IF;
+END;
+/
 
-CREATE TABLE REPRODUCCIONES_PARTICIONADA (
-    id_reproduccion     NUMBER,
-    id_perfil           NUMBER,
-    id_contenido        NUMBER,
+CREATE TABLE REPRODUCCIONES_ARCHIVO (
+    id_reproduccion     NUMBER          NOT NULL,
+    id_perfil           NUMBER          NOT NULL,
+    id_contenido        NUMBER          NOT NULL,
     id_episodio         NUMBER,
-    fecha_hora_inicio   TIMESTAMP,
+    fecha_hora_inicio   TIMESTAMP       NOT NULL,
     fecha_hora_fin      TIMESTAMP,
-    dispositivo         VARCHAR2(20),
-    porcentaje_avance   NUMBER(5,2)
+    dispositivo         VARCHAR2(20)    NOT NULL,
+    porcentaje_avance   NUMBER(5,2),
+    CONSTRAINT repr_arch_pk PRIMARY KEY (id_reproduccion, fecha_hora_inicio)
 )
 PARTITION BY RANGE (fecha_hora_inicio) (
-    PARTITION p_2024 VALUES LESS THAN (TO_DATE('2025-01-01', 'YYYY-MM-DD')) TABLESPACE TBS_REPROD_2024,
-    PARTITION p_2025 VALUES LESS THAN (TO_DATE('2026-01-01', 'YYYY-MM-DD')) TABLESPACE TBS_REPROD_2025,
-    PARTITION p_max VALUES LESS THAN (MAXVALUE)
+    PARTITION p_2024 VALUES LESS THAN (TIMESTAMP '2025-01-01 00:00:00'),
+    PARTITION p_2025 VALUES LESS THAN (TIMESTAMP '2026-01-01 00:00:00'),
+    PARTITION p_2026 VALUES LESS THAN (TIMESTAMP '2027-01-01 00:00:00'),
+    PARTITION p_max  VALUES LESS THAN (MAXVALUE)
 );
 
+INSERT INTO REPRODUCCIONES_ARCHIVO
+SELECT id_reproduccion, id_perfil, id_contenido, id_episodio,
+       fecha_hora_inicio, fecha_hora_fin, dispositivo, porcentaje_avance
+FROM REPRODUCCIONES;
+
+COMMIT;
+
+PROMPT 'Consulta con partition pruning sobre REPRODUCCIONES_ARCHIVO';
+SELECT dispositivo, COUNT(*) AS total
+FROM REPRODUCCIONES_ARCHIVO
+WHERE fecha_hora_inicio >= TIMESTAMP '2025-01-01 00:00:00'
+  AND fecha_hora_inicio <  TIMESTAMP '2026-01-01 00:00:00'
+GROUP BY dispositivo
+ORDER BY total DESC;
+
+/*
 Justificacion:
 La tabla REPRODUCCIONES es la mas transaccional y grande del sistema.
 Fragmentarla por rango de fechas (fecha_hora_inicio) permite:
 1. Mejorar el rendimiento de consultas que filtran por un periodo especifico (Partition Pruning).
 2. Facilitar el mantenimiento y el archivado (data archiving) de datos antiguos.
-3. Distribuir el I/O en multiples datafiles.
+3. Distribuir el I/O en multiples particiones logicas.
 */

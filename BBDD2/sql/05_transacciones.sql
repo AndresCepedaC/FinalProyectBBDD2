@@ -94,7 +94,7 @@ END;
 -- c) Transaccion de eliminacion de cuenta en cascada
 -- Elimina desde los detalles hasta el padre. Todo o Nada.
 DECLARE
-    v_id_usuario_eliminar NUMBER := 35; -- Asumiendo un ID existente
+    v_id_usuario_eliminar NUMBER := 30; -- Ultimo usuario de prueba
 BEGIN
     DBMS_OUTPUT.PUT_LINE('Iniciando eliminacion en cascada del usuario ID ' || v_id_usuario_eliminar);
     
