@@ -70,10 +70,18 @@ async function apiFetch(endpoint, options = {}) {
         const isJson = response.headers.get('content-type')?.includes('application/json');
         
         if (!response.ok) {
+            // Manejo de caducidad de sesion o no autorizado
+            if (response.status === 401 || response.status === 403) {
+                sessionStorage.clear();
+                showToast("Tu sesión ha caducado. Inicia sesión nuevamente.", "error");
+                switchView('login-view');
+                throw new Error("Sesión caducada");
+            }
+
             let errorMsg = 'Error en la solicitud';
             if (isJson) {
                 const errData = await response.json();
-                errorMsg = errData.mensaje || errData.message || errorMsg; // GlobalExceptionHandler structure
+                errorMsg = errData.mensaje || errData.message || errData.error || errorMsg; // GlobalExceptionHandler structure
             } else {
                 errorMsg = await response.text() || errorMsg;
             }
@@ -96,6 +104,11 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    const btnSubmit = document.querySelector('#login-form button[type="submit"]');
+
+    btnSubmit.disabled = true;
+    const originalText = btnSubmit.textContent;
+    btnSubmit.textContent = "Cargando...";
 
     try {
         const data = await apiFetch('/api/auth/login', {
@@ -112,6 +125,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         loadProfiles();
     } catch (e) {
         // Error manejado en apiFetch
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = originalText;
     }
 });
 

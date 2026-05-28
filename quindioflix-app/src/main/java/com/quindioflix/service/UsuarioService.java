@@ -15,7 +15,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Usuario registrarUsuario(Usuario usuario, Long idPlan) {
         if (usuarioRepository.findByEmail(usuario.getEmail()).isPresent()) {
             throw new RuntimeException("El email ya esta registrado.");

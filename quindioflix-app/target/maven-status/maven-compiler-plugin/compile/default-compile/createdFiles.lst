@@ -1,4 +1,5 @@
 com/quindioflix/model/HistorialPlan$HistorialPlanBuilder.class
+com/quindioflix/dto/LoginResponseDTO.class
 com/quindioflix/model/Reporte$ReporteBuilder.class
 com/quindioflix/model/base/BaseEntity.class
 com/quindioflix/repository/PerfilRepository.class
@@ -33,16 +34,19 @@ com/quindioflix/service/ContenidoService.class
 com/quindioflix/model/Episodio$EpisodioBuilder.class
 com/quindioflix/config/SecurityConfig.class
 com/quindioflix/repository/DepartamentoRepository.class
+com/quindioflix/dto/LoginResponseDTO$LoginResponseDTOBuilder.class
 com/quindioflix/config/JpaConfig.class
 com/quindioflix/dto/RegistroUsuarioDTO.class
 com/quindioflix/controller/ReportesController.class
 com/quindioflix/dto/UsuarioPublicoDTO$UsuarioPublicoDTOBuilder.class
 com/quindioflix/model/Empleado.class
+com/quindioflix/dto/ReproduccionRequestDTO.class
 com/quindioflix/model/Temporada$TemporadaBuilder.class
 com/quindioflix/dto/UsuarioPublicoDTO.class
 com/quindioflix/model/Ciudad.class
 com/quindioflix/repository/CiudadRepository.class
 com/quindioflix/model/Calificacion$CalificacionBuilder.class
+com/quindioflix/dto/CalificacionRequestDTO.class
 com/quindioflix/service/UsuarioService.class
 com/quindioflix/repository/UsuarioRepository.class
 com/quindioflix/model/Pago$PagoBuilder.class
@@ -62,6 +66,7 @@ com/quindioflix/controller/PublicCatalogoController.class
 com/quindioflix/model/Reporte.class
 com/quindioflix/model/Temporada.class
 com/quindioflix/model/Departamento.class
+com/quindioflix/dto/LoginRequestDTO.class
 com/quindioflix/model/Departamento$DepartamentoBuilder.class
 com/quindioflix/repository/HistorialPlanRepository.class
 com/quindioflix/model/ContenidoRelacionado$ContenidoRelacionadoId.class
