@@ -23,19 +23,36 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler({java.sql.SQLException.class, org.springframework.dao.DataIntegrityViolationException.class})
+    public ResponseEntity<Map<String, String>> handleDatabaseExceptions(Exception ex) {
+        String fullMessage = ex.getMessage();
+        String cleanMessage = "Error en la base de datos.";
+        
+        if (fullMessage != null && fullMessage.contains("ORA-2000")) {
+            // Extraer el texto limpio del trigger (ej. ORA-20001: Límite superado)
+            int startIndex = fullMessage.indexOf("ORA-2000");
+            int colonIndex = fullMessage.indexOf(":", startIndex);
+            int newLineIndex = fullMessage.indexOf("\n", startIndex);
+            
+            if (colonIndex != -1) {
+                if (newLineIndex != -1) {
+                    cleanMessage = fullMessage.substring(colonIndex + 1, newLineIndex).trim();
+                } else {
+                    cleanMessage = fullMessage.substring(colonIndex + 1).trim();
+                }
+            }
+        }
+        
+        Map<String, String> body = new HashMap<>();
+        body.put("error", cleanMessage);
+        
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now());
-        
-        // Manejo Avanzado: Capturar excepciones personalizadas lanzadas por los TRIGGERS de Oracle (ORA-2000X)
-        if (ex.getMessage() != null && ex.getMessage().contains("ORA-2000")) {
-            body.put("message", "Regla de negocio de la Base de Datos violada.");
-            body.put("database_error", ex.getMessage().split("\n")[0]); // Extrae solo la linea del error ORA
-            body.put("status", HttpStatus.CONFLICT.value());
-            return new ResponseEntity<>(body, HttpStatus.CONFLICT);
-        }
-
         body.put("message", "Ha ocurrido un error interno en el servidor.");
         body.put("error", ex.getMessage());
         body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());

@@ -22,24 +22,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(AbstractHttpConfigurer::disable) // Deshabilitado para simplificar la API REST
+            .cors(org.springframework.security.config.Customizer.withDefaults())
+            .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                // Recursos estaticos del frontend
                 .requestMatchers("/", "/*.html", "/*.css", "/*.js", "/favicon.ico").permitAll()
-                // Endpoints publicos de registro/login
-                .requestMatchers("/api/auth/**").permitAll()
-                // Catalogo publico
-                .requestMatchers("/api/public/**").permitAll()
-                // Catalogo de contenidos (GET)
-                .requestMatchers("/api/contenidos/**").permitAll()
-                .requestMatchers("/api/contenidos").permitAll()
-                // Usuarios y reportes abiertos para modo demo (sin JWT implementado)
-                .requestMatchers("/api/usuarios/**").permitAll()
-                .requestMatchers("/api/reportes/**").permitAll()
-                // Health check
-                .requestMatchers("/actuator/health").permitAll()
-                .anyRequest().permitAll() // Demo mode: todo abierto
+                .requestMatchers("/api/auth/**", "/api/catalogo/**").permitAll()
+                .anyRequest().authenticated()
             )
             .httpBasic(AbstractHttpConfigurer::disable);
             

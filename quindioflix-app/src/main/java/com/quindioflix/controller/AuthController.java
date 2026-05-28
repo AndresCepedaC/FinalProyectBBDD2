@@ -1,8 +1,11 @@
 package com.quindioflix.controller;
 
+import com.quindioflix.dto.LoginRequestDTO;
+import com.quindioflix.dto.LoginResponseDTO;
 import com.quindioflix.dto.RegistroUsuarioDTO;
 import com.quindioflix.dto.UsuarioPublicoDTO;
 import com.quindioflix.model.Usuario;
+import com.quindioflix.repository.UsuarioRepository;
 import com.quindioflix.service.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +20,32 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UsuarioService usuarioService;
+    private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Credenciales invalidas"));
+
+        if (!passwordEncoder.matches(request.getPassword(), usuario.getContrasenaHash())) {
+            throw new RuntimeException("Credenciales invalidas");
+        }
+
+        // Simulacion de token y definicion de rol
+        String fakeToken = "jwt_fake_token_" + usuario.getId();
+        String rol = usuario.getEmail().contains("admin") ? "ADMIN" : "USER";
+
+        LoginResponseDTO response = LoginResponseDTO.builder()
+                .token(fakeToken)
+                .idUsuario(usuario.getId())
+                .nombre(usuario.getNombreCompleto())
+                .email(usuario.getEmail())
+                .rol(rol)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/register")
     public ResponseEntity<UsuarioPublicoDTO> registrarUsuario(@Valid @RequestBody RegistroUsuarioDTO dto) {
