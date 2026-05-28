@@ -1,6 +1,8 @@
 package com.quindioflix.controller;
 
 import com.quindioflix.dto.CalificacionRequestDTO;
+import com.quindioflix.dto.ContenidoCatalogoDTO;
+import com.quindioflix.dto.ContenidoDetalleDTO;
 import com.quindioflix.dto.ReproduccionRequestDTO;
 import com.quindioflix.model.Calificacion;
 import com.quindioflix.model.Contenido;
@@ -33,20 +35,19 @@ public class ContenidoController {
     private final ContenidoRepository contenidoRepository;
 
     @GetMapping
-    public ResponseEntity<Page<Contenido>> obtenerCatalogo(
+    public ResponseEntity<Page<ContenidoCatalogoDTO>> obtenerCatalogo(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "popularidad") String sortBy) {
         
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
-        Page<Contenido> catalogo = contenidoService.obtenerCatalogoPaginado(pageRequest);
+        Page<ContenidoCatalogoDTO> catalogo = contenidoService.obtenerCatalogoPaginado(pageRequest);
         return ResponseEntity.ok(catalogo);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Contenido> obtenerDetalle(@PathVariable Long id) {
-        Contenido contenido = contenidoService.obtenerDetalleContenido(id);
-        return ResponseEntity.ok(contenido);
+    public ResponseEntity<ContenidoDetalleDTO> obtenerDetalle(@PathVariable Long id) {
+        return ResponseEntity.ok(contenidoService.obtenerDetalleContenido(id));
     }
 
     @PostMapping("/reproducir")

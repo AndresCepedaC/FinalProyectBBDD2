@@ -6,5 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EpisodioRepository extends JpaRepository<Episodio, Long> {
+    long countByTemporada_Contenido_Id(Long contenidoId);
+    long countByTemporada_Id(Long temporadaId);
 }
 

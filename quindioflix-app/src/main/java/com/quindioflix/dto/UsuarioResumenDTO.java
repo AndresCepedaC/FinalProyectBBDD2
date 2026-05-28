@@ -17,6 +17,7 @@ public class UsuarioResumenDTO {
     private String nombreCompleto;
     private String email;
     private String plan;
+    private Long idPlan;
     private String ciudad;
     private String estadoCuenta;
 

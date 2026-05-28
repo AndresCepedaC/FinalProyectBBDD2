@@ -47,6 +47,7 @@
                     Perfil
                 </div>
                 <button id="btn-switch-profile" class="btn btn-text">Cambiar Perfil</button>
+                <button id="btn-change-plan" class="btn btn-text">Mi Plan</button>
             </nav>
         </header>
 
@@ -60,10 +61,21 @@
 
     <!-- MODAL: DETALLES Y ACCIONES (REPRODUCIR / CALIFICAR) -->
     <div id="content-modal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content modal-scrollable content-detail-modal">
             <span class="close-btn" id="close-modal">&times;</span>
-            <h2 id="modal-title">Título</h2>
-            <p id="modal-desc">Descripción</p>
+            <div class="detail-header">
+                <img id="modal-poster" class="detail-poster" src="" alt="Portada">
+                <div class="detail-header-text">
+                    <h2 id="modal-title">Título</h2>
+                    <div id="modal-badges" class="detail-badges"></div>
+                </div>
+            </div>
+            <div id="modal-meta" class="detail-meta"></div>
+            <div id="modal-series" class="detail-series hidden"></div>
+            <div class="detail-sinopsis-block">
+                <h3>Sinopsis</h3>
+                <p id="modal-desc">Descripción</p>
+            </div>
             <div class="modal-actions">
                 <button id="btn-play" class="btn btn-primary">► Reproducir</button>
             </div>
@@ -77,12 +89,92 @@
         </div>
     </div>
 
+    <!-- MODAL: CAMBIAR PLAN -->
+    <div id="plan-modal" class="modal hidden">
+        <div class="modal-content modal-scrollable">
+            <span class="close-btn" id="close-plan-modal">&times;</span>
+
+            <div id="plan-step-select">
+                <h2>Cambiar plan de suscripción</h2>
+                <p id="plan-current-label" class="plan-current"></p>
+                <div id="plans-options" class="plans-grid"></div>
+            </div>
+
+            <div id="plan-step-checkout" class="hidden">
+                <h2>Pago de suscripción</h2>
+                <p id="checkout-summary" class="plan-current"></p>
+                <form id="checkout-form" class="checkout-form">
+                    <label>Nombre en la tarjeta</label>
+                    <input type="text" id="pay-name" required placeholder="Ej: Andres Cepeda" value="Andres Cepeda">
+
+                    <label>Número de tarjeta</label>
+                    <input type="text" id="pay-card" required placeholder="4532 1234 5678 9010" maxlength="19" value="4532 1234 5678 9010">
+
+                    <div class="checkout-row">
+                        <div>
+                            <label>Vencimiento</label>
+                            <input type="text" id="pay-expiry" required placeholder="MM/AA" maxlength="5" value="12/28">
+                        </div>
+                        <div>
+                            <label>CVV</label>
+                            <input type="text" id="pay-cvv" required placeholder="123" maxlength="4" value="123">
+                        </div>
+                    </div>
+
+                    <label>Método de pago</label>
+                    <select id="pay-method">
+                        <option value="TARJETA_CREDITO">Tarjeta de crédito</option>
+                        <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                    </select>
+
+                    <div class="checkout-actions">
+                        <button type="button" id="btn-checkout-back" class="btn btn-secondary">Volver</button>
+                        <button type="submit" id="btn-checkout-pay" class="btn btn-primary">Pagar y activar plan</button>
+                    </div>
+                </form>
+                <div id="checkout-processing" class="checkout-processing hidden">
+                    <div class="spinner"></div>
+                    <p>Procesando transacción segura...</p>
+                </div>
+                <div id="checkout-success" class="checkout-success hidden">
+                    <p class="success-icon">✓</p>
+                    <h3 id="checkout-success-title">¡Pago aprobado!</h3>
+                    <p id="checkout-success-detail"></p>
+                    <button type="button" id="btn-checkout-done" class="btn btn-primary">Continuar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CLIENTES (ADMIN) -->
+    <div id="clients-modal" class="modal hidden">
+        <div class="modal-content modal-scrollable admin-reports">
+            <span class="close-btn" id="close-clients-modal">&times;</span>
+            <h2>Clientes y planes</h2>
+            <div class="table-responsive modal-table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Email</th>
+                            <th>Ciudad</th>
+                            <th>Plan</th>
+                            <th>Estado</th>
+                            <th>Perfiles</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clients-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: REPORTES (ADMIN) -->
     <div id="reports-modal" class="modal hidden">
-        <div class="modal-content admin-reports">
+        <div class="modal-content modal-scrollable admin-reports">
             <span class="close-btn" id="close-reports-modal">&times;</span>
             <h2>Reportes (Vista Materializada)</h2>
-            <div class="table-responsive">
+            <div class="table-responsive modal-table-scroll">
                 <table id="reports-table">
                     <thead>
                         <tr>

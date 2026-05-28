@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PerfilRepository extends JpaRepository<Perfil, Long> {
+    int countByUsuario_Id(Long usuarioId);
 }
 

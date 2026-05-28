@@ -25,31 +25,50 @@ function switchView(viewId) {
     document.getElementById(viewId).classList.replace('hidden', 'active');
 }
 
+function openModal(modalEl) {
+    modalEl.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+}
+
+function closeModal(modalEl) {
+    modalEl.classList.add('hidden');
+    if (!document.querySelector('.modal:not(.hidden)')) {
+        document.body.classList.remove('modal-open');
+    }
+}
+
 function updateNav() {
     if (state.perfilActual) {
         document.getElementById('current-profile-display').textContent = state.perfilActual.nombre;
     }
-    
-    // Inyectar dinámicamente el botón de Reportes Admin solo si el ROL es ADMIN
-    let adminBtn = document.getElementById('btn-admin-reports');
-    if (state.user && state.user.rol === 'ADMIN') {
-        if (!adminBtn) {
-            adminBtn = document.createElement('button');
-            adminBtn.id = 'btn-admin-reports';
-            adminBtn.className = 'btn btn-warning';
-            adminBtn.textContent = 'Módulo de Reportes';
-            adminBtn.addEventListener('click', loadAdminReports);
-            
-            const nav = document.getElementById('main-nav');
-            if(nav) {
-                nav.insertBefore(adminBtn, document.getElementById('current-profile-display'));
-            }
-        }
-    } else {
-        // Si el usuario no es admin o cambia de estado, se destruye el botón por seguridad
-        if (adminBtn) {
-            adminBtn.remove();
-        }
+
+    const planBtn = document.getElementById('btn-change-plan');
+    if (planBtn) {
+        planBtn.style.display = (state.user && state.user.rol === 'ADMIN') ? 'none' : 'inline-block';
+    }
+
+    const nav = document.getElementById('main-nav');
+    const anchor = document.getElementById('current-profile-display');
+
+    ['btn-admin-reports', 'btn-admin-clients'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+
+    if (state.user && state.user.rol === 'ADMIN' && nav) {
+        const clientsBtn = document.createElement('button');
+        clientsBtn.id = 'btn-admin-clients';
+        clientsBtn.className = 'btn btn-warning';
+        clientsBtn.textContent = 'Ver Clientes';
+        clientsBtn.addEventListener('click', loadAdminClients);
+        nav.insertBefore(clientsBtn, anchor);
+
+        const reportsBtn = document.createElement('button');
+        reportsBtn.id = 'btn-admin-reports';
+        reportsBtn.className = 'btn btn-warning';
+        reportsBtn.textContent = 'Reportes';
+        reportsBtn.addEventListener('click', loadAdminReports);
+        nav.insertBefore(reportsBtn, anchor);
     }
 }
 
@@ -123,8 +142,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
         showToast(`Bienvenido, ${data.nombre}`, 'success');
         loadProfiles();
-    } catch (e) {
-        // Error manejado en apiFetch
+    } catch (err) {
+        showToast(err.message || 'Error al iniciar sesión', 'error');
     } finally {
         btnSubmit.disabled = false;
         btnSubmit.textContent = originalText;
@@ -145,6 +164,7 @@ async function loadProfiles() {
         const data = await apiFetch(`/api/usuarios/${state.user.idUsuario}/resumen`);
         state.perfiles = data.perfiles || [];
         renderProfiles();
+        updateNav();
     } catch (e) {
         showToast('No se pudieron cargar los perfiles', 'error');
     }
@@ -176,13 +196,52 @@ document.getElementById('btn-switch-profile').addEventListener('click', () => {
     loadProfiles();
 });
 
+// Portadas fijas por id (respaldo si el backend no envia urlPortada)
+const PORTADAS_QUEMADAS = {
+    1: 'https://picsum.photos/seed/qf-guardian/300/169',
+    2: 'https://picsum.photos/seed/qf-digital/300/169',
+    3: 'https://picsum.photos/seed/qf-cafe/300/169',
+    4: 'https://picsum.photos/seed/qf-tango/300/169',
+    5: 'https://picsum.photos/seed/qf-bio/300/169',
+    6: 'https://picsum.photos/seed/qf-rojo/300/169',
+    7: 'https://picsum.photos/seed/qf-herencia/300/169',
+    8: 'https://picsum.photos/seed/qf-vuelo/300/169',
+    9: 'https://picsum.photos/seed/qf-cocora/300/169',
+    10: 'https://picsum.photos/seed/qf-voces/300/169',
+    11: 'https://picsum.photos/seed/qf-sombras/300/169',
+    12: 'https://picsum.photos/seed/qf-startup/300/169'
+};
+
+function portadaDe(contenido) {
+    return contenido.urlPortada || PORTADAS_QUEMADAS[contenido.id] || `https://picsum.photos/seed/qf-${contenido.id}/300/169`;
+}
+
+function esAptoParaInfantil(contenido) {
+    const edad = (contenido.clasificacionEdad || '').toUpperCase().trim();
+    if (edad === 'TP' || edad === 'TODOS' || edad === '+7') return true;
+    const cat = (contenido.nombreCategoria || '').toLowerCase();
+    return cat.includes('animacion') || cat.includes('documental');
+}
+
+function filtrarPorPerfil(contenidos) {
+    if (!state.perfilActual) return contenidos;
+    if (state.perfilActual.tipo === 'INFANTIL') {
+        return contenidos.filter(esAptoParaInfantil);
+    }
+    return contenidos;
+}
+
 // ===== CATÁLOGO =====
 async function loadCatalog() {
     switchView('dashboard-view');
     try {
-        // Usar endpoint de catalogo publico o general (ajustar segun backend real)
-        const data = await apiFetch('/api/contenidos?size=20');
-        renderCatalog(data.content || []);
+        const data = await apiFetch('/api/contenidos?size=40');
+        const lista = data.content || [];
+        const filtrados = filtrarPorPerfil(lista);
+        if (filtrados.length === 0) {
+            showToast('No hay títulos para este perfil', 'error');
+        }
+        renderCatalog(filtrados);
     } catch (e) {
         showToast('Error cargando el catálogo', 'error');
     }
@@ -192,19 +251,16 @@ function renderCatalog(contenidos) {
     const grid = document.getElementById('catalog-grid');
     grid.innerHTML = '';
 
-    // Filtrar contenido infantil si el perfil es INFANTIL (simulacion frontend)
-    const filtrados = state.perfilActual.tipo === 'INFANTIL' 
-        ? contenidos.filter(c => c.categoria && c.categoria.nombreCategoria.toLowerCase().includes('infantil'))
-        : contenidos;
-
-    filtrados.forEach(c => {
+    contenidos.forEach(c => {
         const div = document.createElement('div');
         div.className = 'content-card';
+        const imgSrc = portadaDe(c);
         div.innerHTML = `
-            <img class="content-img" src="https://via.placeholder.com/300x169?text=${encodeURIComponent(c.titulo)}" alt="${c.titulo}">
+            <img class="content-img" src="${imgSrc}" alt="${c.titulo}" loading="lazy"
+                 onerror="this.onerror=null;this.src='https://picsum.photos/seed/fallback-${c.id}/300/169'">
             <div class="content-info">
                 <div class="content-title">${c.titulo}</div>
-                <div class="content-meta">${c.categoria ? c.categoria.nombreCategoria : 'Sin Categoría'}</div>
+                <div class="content-meta">${c.nombreCategoria || 'Sin categoría'} · ${c.clasificacionEdad || ''}</div>
             </div>
         `;
         div.onclick = () => openContentModal(c);
@@ -214,21 +270,84 @@ function renderCatalog(contenidos) {
 
 // ===== MODAL DE CONTENIDO Y SIMULACIÓN PL/SQL =====
 const modal = document.getElementById('content-modal');
-const closeModal = document.getElementById('close-modal');
+const closeContentModalBtn = document.getElementById('close-modal');
 
-function openContentModal(contenido) {
+async function openContentModal(contenido) {
     state.contenidoActual = contenido.id;
     document.getElementById('modal-title').textContent = contenido.titulo;
-    document.getElementById('modal-desc').textContent = contenido.descripcion || 'Sin descripción disponible.';
-    
-    // Reset inputs
+    document.getElementById('modal-poster').src = portadaDe(contenido);
+    document.getElementById('modal-badges').innerHTML = '';
+    document.getElementById('modal-meta').innerHTML = '<p class="detail-loading">Cargando ficha del título...</p>';
+    document.getElementById('modal-series').classList.add('hidden');
+    document.getElementById('modal-desc').textContent = '';
     document.getElementById('rating-stars').value = '';
     document.getElementById('rating-review').value = '';
-    
-    modal.classList.remove('hidden');
+    openModal(modal);
+
+    try {
+        const det = await apiFetch(`/api/contenidos/${contenido.id}`);
+        renderContentDetail(det);
+    } catch (e) {
+        document.getElementById('modal-desc').textContent = contenido.sinopsis || 'Sin descripción disponible.';
+        document.getElementById('modal-meta').innerHTML =
+            `<div class="meta-item"><span class="meta-label">Categoría</span><span>${contenido.nombreCategoria || '—'}</span></div>`;
+    }
 }
 
-closeModal.onclick = () => modal.classList.add('hidden');
+function renderContentDetail(det) {
+    document.getElementById('modal-title').textContent = det.titulo;
+    document.getElementById('modal-poster').src = det.urlPortada || portadaDe(det);
+    document.getElementById('modal-desc').textContent = det.sinopsis || 'Sinopsis no disponible.';
+
+    const badges = document.getElementById('modal-badges');
+    badges.innerHTML = `
+        <span class="badge badge-cat">${det.nombreCategoria}</span>
+        <span class="badge badge-age">${det.clasificacionEdad}</span>
+        ${det.esOriginal ? '<span class="badge badge-original">Original QuindioFlix</span>' : ''}
+        <span class="badge badge-state">${det.estado || 'ACTIVO'}</span>
+    `;
+
+    const generosTexto = det.generos && det.generos.length
+        ? det.generos.join(', ')
+        : 'No especificados';
+
+    document.getElementById('modal-meta').innerHTML = `
+        <div class="meta-grid">
+            <div class="meta-item"><span class="meta-label">Categoría</span><span>${det.nombreCategoria}</span></div>
+            <div class="meta-item"><span class="meta-label">Tipo</span><span>${det.esSerie ? 'Serie / Serial' : 'Película'}</span></div>
+            <div class="meta-item"><span class="meta-label">Año</span><span>${det.anoLanzamiento || '—'}</span></div>
+            <div class="meta-item"><span class="meta-label">Duración</span><span>${det.duracionTexto}</span></div>
+            <div class="meta-item"><span class="meta-label">Géneros</span><span>${generosTexto}</span></div>
+            <div class="meta-item"><span class="meta-label">Popularidad</span><span>${det.popularidad ?? '—'} / 100</span></div>
+        </div>
+    `;
+
+    const seriesBlock = document.getElementById('modal-series');
+    if (det.esSerie) {
+        let seriesHtml = `
+            <h3>Información de la serie</h3>
+            <p class="series-summary">
+                <strong>${det.totalTemporadas}</strong> temporada(s) ·
+                <strong>${det.totalEpisodios}</strong> episodio(s) en total
+            </p>
+        `;
+        if (det.temporadas && det.temporadas.length > 0) {
+            seriesHtml += '<ul class="season-list">';
+            det.temporadas.forEach(t => {
+                seriesHtml += `<li>Temporada ${t.numeroTemporada}: ${t.cantidadEpisodios} episodio(s)</li>`;
+            });
+            seriesHtml += '</ul>';
+        } else {
+            seriesHtml += '<p class="series-note">Este título pertenece al catálogo serial; los capítulos se irán publicando próximamente.</p>';
+        }
+        seriesBlock.innerHTML = seriesHtml;
+        seriesBlock.classList.remove('hidden');
+    } else {
+        seriesBlock.classList.add('hidden');
+    }
+}
+
+closeContentModalBtn.onclick = () => closeModal(modal);
 
 // Simular Reproducción
 document.getElementById('btn-play').addEventListener('click', async () => {
@@ -244,7 +363,7 @@ document.getElementById('btn-play').addEventListener('click', async () => {
                 porcentajeAvance: Math.floor(Math.random() * 100) // Simular un avance aleatorio entre 0 y 100
             })
         });
-        showToast('Reproducción guardada', 'success');
+        showToast('Reproducción guardada en la base de datos', 'success');
     } catch (e) {
         // Error es manejado en apiFetch
     }
@@ -272,8 +391,8 @@ document.getElementById('btn-rate').addEventListener('click', async () => {
                 resena: resena
             })
         });
-        showToast('Calificación enviada correctamente', 'success');
-        modal.classList.add('hidden');
+        showToast('Calificación guardada correctamente', 'success');
+        closeModal(modal);
     } catch (e) {
         // Si el trigger rechaza, se mostrará el toast de error gracias a apiFetch!
     }
@@ -288,24 +407,194 @@ async function loadAdminReports() {
         const tbody = document.getElementById('reports-body');
         tbody.innerHTML = '';
         
-        data.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${r.titulo}</td>
-                <td>${r.categoria}</td>
-                <td>${r.totalReproducciones}</td>
-                <td>${r.calificacionPromedio ? parseFloat(r.calificacionPromedio).toFixed(1) : 'N/A'}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">Sin datos en el reporte</td></tr>';
+        } else {
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${r.titulo}</td>
+                    <td>${r.categoria}</td>
+                    <td>${r.totalReproducciones ?? 0}</td>
+                    <td>${r.calificacionPromedio != null ? parseFloat(r.calificacionPromedio).toFixed(1) : 'N/A'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
         
-        reportsModal.classList.remove('hidden');
+        openModal(reportsModal);
     } catch (e) {
         showToast('Error cargando reportes', 'error');
     }
 }
 
-document.getElementById('close-reports-modal').onclick = () => reportsModal.classList.add('hidden');
+document.getElementById('close-reports-modal').onclick = () => closeModal(reportsModal);
+
+// ===== CAMBIAR PLAN =====
+const planModal = document.getElementById('plan-modal');
+const planStepSelect = document.getElementById('plan-step-select');
+const planStepCheckout = document.getElementById('plan-step-checkout');
+const checkoutForm = document.getElementById('checkout-form');
+const checkoutProcessing = document.getElementById('checkout-processing');
+const checkoutSuccess = document.getElementById('checkout-success');
+let planesDisponibles = [];
+let planSeleccionado = null;
+
+document.getElementById('btn-change-plan').addEventListener('click', openPlanModal);
+document.getElementById('close-plan-modal').onclick = () => cerrarPlanModal();
+document.getElementById('btn-checkout-back').onclick = () => mostrarPasoPlan('select');
+document.getElementById('btn-checkout-done').onclick = () => cerrarPlanModal();
+checkoutForm.addEventListener('submit', procesarPagoPlan);
+
+function cerrarPlanModal() {
+    closeModal(planModal);
+    resetCheckoutUi();
+    mostrarPasoPlan('select');
+}
+
+function resetCheckoutUi() {
+    checkoutForm.classList.remove('hidden');
+    checkoutProcessing.classList.add('hidden');
+    checkoutSuccess.classList.add('hidden');
+    planSeleccionado = null;
+}
+
+function mostrarPasoPlan(paso) {
+    if (paso === 'select') {
+        planStepSelect.classList.remove('hidden');
+        planStepCheckout.classList.add('hidden');
+        resetCheckoutUi();
+    } else {
+        planStepSelect.classList.add('hidden');
+        planStepCheckout.classList.remove('hidden');
+    }
+}
+
+async function openPlanModal() {
+    try {
+        const [planes, resumen] = await Promise.all([
+            apiFetch('/api/public/planes'),
+            apiFetch(`/api/usuarios/${state.user.idUsuario}/resumen`)
+        ]);
+        planesDisponibles = planes;
+        document.getElementById('plan-current-label').textContent =
+            `Plan actual: ${resumen.plan || '—'}`;
+
+        const grid = document.getElementById('plans-options');
+        grid.innerHTML = '';
+        planes.forEach(pl => {
+            const card = document.createElement('div');
+            card.className = 'plan-card';
+            card.innerHTML = `
+                <h3>${pl.nombrePlan}</h3>
+                <p>${pl.calidad} · ${pl.limitePantallas} pantalla(s)</p>
+                <p>Hasta ${pl.maxPerfiles} perfiles</p>
+                <p class="plan-price">$${pl.precioMensual.toLocaleString('es-CO')}/mes</p>
+                <button class="btn btn-primary btn-select-plan" data-plan-id="${pl.id}">Elegir</button>
+            `;
+            if (resumen.idPlan === pl.id) {
+                card.classList.add('plan-active');
+            }
+            grid.appendChild(card);
+        });
+
+        grid.querySelectorAll('.btn-select-plan').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const planId = parseInt(btn.dataset.planId, 10);
+                const plan = planesDisponibles.find(p => p.id === planId);
+                if (resumen.idPlan === planId) {
+                    showToast('Ya tienes este plan activo', 'error');
+                    return;
+                }
+                iniciarCheckout(plan);
+            });
+        });
+
+        mostrarPasoPlan('select');
+        openModal(planModal);
+    } catch (e) {
+        showToast('No se pudieron cargar los planes', 'error');
+    }
+}
+
+function iniciarCheckout(plan) {
+    planSeleccionado = plan;
+    document.getElementById('checkout-summary').textContent =
+        `Vas a pagar $${plan.precioMensual.toLocaleString('es-CO')} por el plan ${plan.nombrePlan}`;
+    const nombreInput = document.getElementById('pay-name');
+    if (state.user && !nombreInput.value) {
+        nombreInput.value = state.user.nombre || '';
+    }
+    mostrarPasoPlan('checkout');
+}
+
+async function procesarPagoPlan(e) {
+    e.preventDefault();
+    if (!state.user || !planSeleccionado) return;
+
+    checkoutForm.classList.add('hidden');
+    checkoutProcessing.classList.remove('hidden');
+
+    const payload = {
+        nuevoPlanId: planSeleccionado.id,
+        numeroTarjeta: document.getElementById('pay-card').value,
+        nombreTitular: document.getElementById('pay-name').value,
+        metodoPago: document.getElementById('pay-method').value
+    };
+
+    await new Promise(r => setTimeout(r, 1800));
+
+    try {
+        const result = await apiFetch(`/api/usuarios/${state.user.idUsuario}/cambiar-plan-pago`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        checkoutProcessing.classList.add('hidden');
+        checkoutSuccess.classList.remove('hidden');
+        document.getElementById('checkout-success-title').textContent = '¡Pago aprobado!';
+        document.getElementById('checkout-success-detail').innerHTML =
+            `${result.mensaje}<br><br>` +
+            `<strong>Referencia:</strong> ${result.referenciaTransaccion}<br>` +
+            `<strong>Monto:</strong> $${result.monto.toLocaleString('es-CO')}<br>` +
+            `<strong>Plan:</strong> ${result.planAnterior} → ${result.planNuevo}`;
+
+        const resumen = await apiFetch(`/api/usuarios/${state.user.idUsuario}/resumen`);
+        if (state.user) state.user.plan = resumen.plan;
+        showToast('Suscripción actualizada', 'success');
+    } catch (err) {
+        checkoutProcessing.classList.add('hidden');
+        checkoutForm.classList.remove('hidden');
+    }
+}
+
+// ===== CLIENTES ADMIN =====
+const clientsModal = document.getElementById('clients-modal');
+
+async function loadAdminClients() {
+    try {
+        const data = await apiFetch('/api/admin/clientes');
+        const tbody = document.getElementById('clients-body');
+        tbody.innerHTML = '';
+        data.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${c.nombreCompleto}</td>
+                <td>${c.email}</td>
+                <td>${c.ciudad}</td>
+                <td><strong>${c.plan}</strong></td>
+                <td>${c.estadoCuenta}</td>
+                <td>${c.cantidadPerfiles}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        openModal(clientsModal);
+    } catch (e) {
+        showToast('Error cargando clientes', 'error');
+    }
+}
+
+document.getElementById('close-clients-modal').onclick = () => closeModal(clientsModal);
 
 // ===== INIT =====
 window.onload = () => {

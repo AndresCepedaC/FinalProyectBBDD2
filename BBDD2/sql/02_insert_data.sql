@@ -16,6 +16,10 @@ INSERT INTO CIUDADES (id_ciudad, nombre_ciudad) VALUES (SEQ_CIUDADES.NEXTVAL, 'A
 INSERT INTO CIUDADES (id_ciudad, nombre_ciudad) VALUES (SEQ_CIUDADES.NEXTVAL, 'Cali');
 INSERT INTO CIUDADES (id_ciudad, nombre_ciudad) VALUES (SEQ_CIUDADES.NEXTVAL, 'Barranquilla');
 
+-- USUARIO MAESTRO ADMIN (correo contiene 'admin', hash BCrypt de '123456')
+INSERT INTO USUARIOS (id_usuario, id_plan, id_ciudad, id_referidor, nombre_completo, email, contrasena_hash, telefono, fecha_nacimiento, fecha_registro, estado_cuenta)
+VALUES (SEQ_USUARIOS.NEXTVAL, 3, 1, NULL, 'Profesor Admin', 'admin@quindioflix.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '3000000000', TO_DATE('1980-01-01','YYYY-MM-DD'), SYSDATE, 'ACTIVO');
+
 -- 3. USUARIOS (minimo 30)
 -- Distribuidos en las 3 ciudades principales (1=Bogota, 2=Medellin, 3=Armenia)
 -- y en los 3 planes (1=Basico, 2=Estandar, 3=Premium): 10 usuarios por plan

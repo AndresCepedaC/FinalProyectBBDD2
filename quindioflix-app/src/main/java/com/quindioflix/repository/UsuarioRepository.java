@@ -17,6 +17,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     
     Optional<Usuario> findByEmail(String email);
 
+    @Query("SELECT u FROM Usuario u JOIN FETCH u.plan ORDER BY u.nombreCompleto")
+    List<Usuario> findAllWithPlan();
+
     // 1. Integracion avanzada: Llamar a un Procedimiento Almacenado de Oracle (PL/SQL)
     @Transactional
     @Procedure(procedureName = "SP_CAMBIAR_PLAN")
