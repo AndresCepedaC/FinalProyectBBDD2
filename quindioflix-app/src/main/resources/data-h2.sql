@@ -112,12 +112,14 @@ INSERT INTO CONTENIDO_GENERO (id_contenido, id_genero) VALUES (12, 2);
 INSERT INTO USUARIOS (id_usuario, id_plan, id_ciudad, id_referidor, nombre_completo, email, contrasena_hash, telefono, fecha_nacimiento, fecha_registro, estado_cuenta, fecha_ultimo_pago) VALUES (1, 3, 1, NULL, 'Andres Cepeda Demo', 'andres@demo.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '3001234567', DATE '1995-06-15', DATE '2024-01-10', 'ACTIVO', DATE '2024-12-01');
 INSERT INTO USUARIOS (id_usuario, id_plan, id_ciudad, id_referidor, nombre_completo, email, contrasena_hash, telefono, fecha_nacimiento, fecha_registro, estado_cuenta, fecha_ultimo_pago) VALUES (2, 2, 4, 1, 'Maria Garcia', 'maria@demo.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '3109876543', DATE '1990-03-22', DATE '2024-02-15', 'ACTIVO', DATE '2024-11-15');
 INSERT INTO USUARIOS (id_usuario, id_plan, id_ciudad, id_referidor, nombre_completo, email, contrasena_hash, telefono, fecha_nacimiento, fecha_registro, estado_cuenta, fecha_ultimo_pago) VALUES (3, 1, 5, NULL, 'Juan Lopez', 'juan@demo.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', NULL, DATE '1988-11-05', DATE '2024-05-01', 'SUSPENDIDO', DATE '2024-08-01');
+INSERT INTO USUARIOS (id_usuario, id_plan, id_ciudad, id_referidor, nombre_completo, email, contrasena_hash, telefono, fecha_nacimiento, fecha_registro, estado_cuenta, fecha_ultimo_pago) VALUES (4, 3, 1, NULL, 'Administrador QFlix', 'admin@demo.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '3009999999', DATE '1985-01-01', DATE '2024-01-01', 'ACTIVO', DATE '2024-12-01');
 
 -- PERFILES
 INSERT INTO PERFILES (id_perfil, id_usuario, nombre_perfil, avatar, tipo_perfil, fecha_creacion) VALUES (1, 1, 'Andres', 'avatar1.png', 'ADULTO', CURRENT_TIMESTAMP);
 INSERT INTO PERFILES (id_perfil, id_usuario, nombre_perfil, avatar, tipo_perfil, fecha_creacion) VALUES (2, 1, 'Hijo de Andres', 'avatar_kid.png', 'INFANTIL', CURRENT_TIMESTAMP);
 INSERT INTO PERFILES (id_perfil, id_usuario, nombre_perfil, avatar, tipo_perfil, fecha_creacion) VALUES (3, 2, 'Maria', 'avatar2.png', 'ADULTO', CURRENT_TIMESTAMP);
 INSERT INTO PERFILES (id_perfil, id_usuario, nombre_perfil, avatar, tipo_perfil, fecha_creacion) VALUES (4, 3, 'Juan', 'avatar3.png', 'ADULTO', CURRENT_TIMESTAMP);
+INSERT INTO PERFILES (id_perfil, id_usuario, nombre_perfil, avatar, tipo_perfil, fecha_creacion) VALUES (5, 4, 'AdminPer', 'avatar_admin.png', 'ADULTO', CURRENT_TIMESTAMP);
 
 -- REPRODUCCIONES
 INSERT INTO REPRODUCCIONES (id_reproduccion, id_perfil, id_contenido, id_episodio, fecha_hora_inicio, fecha_hora_fin, dispositivo, porcentaje_avance) VALUES (1, 1, 1, NULL, TIMESTAMP '2024-11-15 20:00:00', TIMESTAMP '2024-11-15 22:22:00', 'TV', 100);
