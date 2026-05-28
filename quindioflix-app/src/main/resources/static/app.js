@@ -1,51 +1,79 @@
+/* =====================================================
+   QuindioFlix — Frontend Application Logic
+   ===================================================== */
+
 const $ = (id) => document.getElementById(id);
 
+// ---- TOAST NOTIFICATIONS ----
+function toast(message, type = "info", duration = 4000) {
+  const container = $("toastContainer");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  container.appendChild(el);
+
+  setTimeout(() => {
+    el.classList.add("removing");
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+// ---- UTILITIES ----
 function formatDate(d) {
   if (!d) return "";
-  // Si el backend devuelve string ISO, lo intentamos adaptar.
-  if (typeof d === "string") {
-    // YYYY-MM-DD o YYYY-MM-DDTHH:mm:ss
-    return d.slice(0, 10);
-  }
+  if (typeof d === "string") return d.slice(0, 10);
   return String(d);
 }
 
+function setLoading(el, loading = true) {
+  if (loading) {
+    el.innerHTML = '<span class="loading-pulse"></span> Cargando...';
+  }
+}
+
+// ---- SELECT LOADERS ----
 async function loadSelect(url, selectEl, idField, labelField) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${url}`);
-  const data = await res.json();
-
-  selectEl.innerHTML = "";
-  data.forEach((item) => {
-    const opt = document.createElement("option");
-    opt.value = item[idField];
-    opt.textContent = item[labelField];
-    selectEl.appendChild(opt);
-  });
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    selectEl.innerHTML = "";
+    data.forEach((item) => {
+      const opt = document.createElement("option");
+      opt.value = item[idField];
+      opt.textContent = item[labelField];
+      selectEl.appendChild(opt);
+    });
+  } catch (err) {
+    console.error(`Error loading ${url}:`, err);
+    selectEl.innerHTML = '<option value="">Error cargando datos</option>';
+  }
 }
 
-function showMessage(el, msg, isError = false) {
-  el.textContent = msg;
-  el.style.borderColor = isError ? "rgba(239,68,68,.35)" : "rgba(96,165,250,.35)";
-}
-
-function catalogCard(contenido) {
-  const h = document.createElement("h3");
-  h.textContent = contenido.titulo ?? `(sin titulo #${contenido.id})`;
-
-  const p = document.createElement("div");
-  p.className = "muted";
-
-  const anio = contenido.anoLanzamiento ?? contenido.ano_lanzamiento ?? "";
-  const edad = contenido.clasificacionEdad ?? "";
-  const pop = contenido.popularidad ?? "";
-
-  p.textContent = `Año: ${anio} | Edad: ${edad} | Popularidad: ${pop}`;
-
+// ---- CATALOG ----
+function catalogCard(contenido, index) {
   const card = document.createElement("div");
   card.className = "card";
-  card.appendChild(h);
-  card.appendChild(p);
+  card.style.animationDelay = `${index * 0.05}s`;
+
+  const title = contenido.titulo ?? `(sin título #${contenido.id})`;
+  const year = contenido.anoLanzamiento ?? contenido.ano_lanzamiento ?? "";
+  const age = contenido.clasificacionEdad ?? "";
+  const pop = contenido.popularidad ?? 0;
+  const duration = contenido.duracionMinutos ? `${contenido.duracionMinutos} min` : "Serie";
+
+  card.innerHTML = `
+    <h3>${title}</h3>
+    <div class="card-meta">
+      <span>📅 ${year}</span>
+      <span>🎯 ${age}</span>
+      <span>⏱️ ${duration}</span>
+    </div>
+    <div class="popularity-bar">
+      <div class="popularity-fill" style="width: ${Math.min(pop, 100)}%"></div>
+    </div>
+  `;
+
   card.addEventListener("click", () => openDetail(contenido.id));
   return card;
 }
@@ -54,68 +82,84 @@ async function loadCatalog() {
   const page = $("page").value;
   const size = $("size").value;
   const sortBy = $("sortBy").value;
-
   const catalog = $("catalog");
+  const meta = $("catalogMeta");
+
   catalog.innerHTML = "";
-  $("catalogMeta").textContent = "Cargando...";
+  setLoading(meta);
 
-  const url = `/api/contenidos?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}&sortBy=${encodeURIComponent(sortBy)}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} al cargar catálogo`);
+  try {
+    const url = `/api/contenidos?page=${encodeURIComponent(page)}&size=${encodeURIComponent(size)}&sortBy=${encodeURIComponent(sortBy)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const items = data.content ?? [];
 
-  const data = await res.json();
-  const items = data.content ?? [];
+    meta.textContent = `📦 ${data.totalElements ?? items.length} resultados · Página ${(data.number ?? page) + 1} de ${data.totalPages ?? 1}`;
 
-  $("catalogMeta").textContent = `Resultados: ${data.totalElements ?? items.length} | Página: ${data.number ?? page}`;
+    items.forEach((c, i) => catalog.appendChild(catalogCard(c, i)));
 
-  items.forEach((c) => catalog.appendChild(catalogCard(c)));
+    if (items.length === 0) {
+      meta.textContent = "No se encontró contenido en esta página.";
+    }
+  } catch (e) {
+    console.error(e);
+    meta.textContent = "";
+    toast(`Error cargando catálogo: ${e.message}`, "error");
+  }
 }
 
 async function openDetail(id) {
   const panel = $("detailPanel");
   panel.style.display = "block";
-
   const pre = $("detailJson");
-  pre.textContent = "Cargando detalle...";
+  setLoading(pre);
 
-  const res = await fetch(`/api/contenidos/${id}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status} al cargar detalle`);
-  const json = await res.json();
-
-  pre.textContent = JSON.stringify(json, null, 2);
+  try {
+    const res = await fetch(`/api/contenidos/${id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    pre.textContent = JSON.stringify(json, null, 2);
+  } catch (e) {
+    pre.textContent = `Error: ${e.message}`;
+    toast(`Error cargando detalle: ${e.message}`, "error");
+  }
 }
 
+// ---- REPORTS ----
 async function loadReports() {
   const limit = Number($("topLimit").value || 10);
   const anio = $("repAnio").value ? Number($("repAnio").value) : null;
   const mes = $("repMes").value ? Number($("repMes").value) : null;
 
-  const popularTarget = $("repPopular");
-  const ingresosTarget = $("repIngresos");
-  popularTarget.textContent = "Cargando...";
-  ingresosTarget.textContent = "Cargando...";
+  const popTarget = $("repPopular");
+  const ingTarget = $("repIngresos");
+  setLoading(popTarget);
+  setLoading(ingTarget);
 
-  const popRes = await fetch(`/api/reportes/contenido-popular?limit=${encodeURIComponent(limit)}`);
-  if (popRes.ok) {
-    const pop = await popRes.json();
-    popularTarget.textContent = JSON.stringify(pop, null, 2);
-  } else {
-    popularTarget.textContent = `Error HTTP ${popRes.status}`;
+  try {
+    const popRes = await fetch(`/api/reportes/contenido-popular?limit=${encodeURIComponent(limit)}`);
+    popTarget.textContent = popRes.ok
+      ? JSON.stringify(await popRes.json(), null, 2)
+      : `Error HTTP ${popRes.status}`;
+  } catch (e) {
+    popTarget.textContent = `Error: ${e.message}`;
   }
 
-  const params = new URLSearchParams();
-  if (anio) params.set("anio", String(anio));
-  if (mes) params.set("mes", String(mes));
-
-  const ingRes = await fetch(`/api/reportes/ingresos-mensuales${params.toString() ? `?${params}` : ""}`);
-  if (ingRes.ok) {
-    const ing = await ingRes.json();
-    ingresosTarget.textContent = JSON.stringify(ing, null, 2);
-  } else {
-    ingresosTarget.textContent = `Error HTTP ${ingRes.status}`;
+  try {
+    const params = new URLSearchParams();
+    if (anio) params.set("anio", String(anio));
+    if (mes) params.set("mes", String(mes));
+    const ingRes = await fetch(`/api/reportes/ingresos-mensuales${params.toString() ? `?${params}` : ""}`);
+    ingTarget.textContent = ingRes.ok
+      ? JSON.stringify(await ingRes.json(), null, 2)
+      : `Error HTTP ${ingRes.status}`;
+  } catch (e) {
+    ingTarget.textContent = `Error: ${e.message}`;
   }
 }
 
+// ---- PAGE NAVIGATION ----
 function switchPage(page) {
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.page === page);
@@ -125,84 +169,68 @@ function switchPage(page) {
   });
 }
 
+// ---- WIRE UP ----
 function wireUI() {
-  // Navegación entre pestañas
+  // Tab navigation
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.addEventListener("click", () => switchPage(btn.dataset.page));
   });
 
-  // Cargar combos (planes/ciudades) para que el registro sea usable.
+  // Load dropdowns for registration
   Promise.all([
     loadSelect("/api/public/ciudades", $("idCiudad"), "id", "nombreCiudad"),
     loadSelect("/api/public/planes", $("idPlan"), "id", "nombrePlan"),
-  ]).catch((err) => {
-    console.error(err);
-    showMessage($("registerMsg"), "Error cargando ciudades/planes. Revisa la API.", true);
-  });
+  ]).catch(() => toast("Error cargando ciudades/planes desde la API.", "error"));
 
-  $("loadCatalogBtn").addEventListener("click", () => {
-    loadCatalog().catch((e) => showMessage($("registerMsg"), e.message, true));
-  });
+  // Catalog
+  $("loadCatalogBtn").addEventListener("click", () => loadCatalog());
+  $("closeDetailBtn").addEventListener("click", () => { $("detailPanel").style.display = "none"; });
 
-  $("closeDetailBtn").addEventListener("click", () => {
-    $("detailPanel").style.display = "none";
-  });
-
+  // User summary
   $("loadUserBtn").addEventListener("click", async () => {
     const id = Number($("usuarioId").value);
     const target = $("userSummary");
     const pagosTarget = $("userPagos");
-    target.textContent = "Cargando usuario...";
-    pagosTarget.textContent = "Cargando pagos...";
+    setLoading(target);
+    setLoading(pagosTarget);
+
     try {
       const res = await fetch(`/api/usuarios/${id}/resumen`);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`HTTP ${res.status}: ${text || "usuario no encontrado"}`);
-      }
-      const data = await res.json();
-      target.textContent = JSON.stringify(data, null, 2);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: usuario no encontrado`);
+      target.textContent = JSON.stringify(await res.json(), null, 2);
 
       const pagosRes = await fetch(`/api/usuarios/${id}/pagos`);
-      if (pagosRes.ok) {
-        const pagos = await pagosRes.json();
-        pagosTarget.textContent = JSON.stringify(pagos, null, 2);
-      } else {
-        pagosTarget.textContent = "No se pudieron cargar los pagos.";
-      }
+      pagosTarget.textContent = pagosRes.ok
+        ? JSON.stringify(await pagosRes.json(), null, 2)
+        : "No se pudieron cargar los pagos.";
     } catch (err) {
-      console.error(err);
       target.textContent = err.message;
-      $("userPagos").textContent = "";
+      pagosTarget.textContent = "";
+      toast(err.message, "error");
     }
   });
 
+  // Change plan
   $("changePlanBtn").addEventListener("click", async () => {
     const id = Number($("usuarioId").value);
     const nuevoPlanId = Number($("nuevoPlanId").value);
     if (!id || !nuevoPlanId) {
-      alert("Ingresa ID de usuario y nuevo plan.");
+      toast("Ingresa ID de usuario y nuevo plan.", "warning");
       return;
     }
     try {
-      const res = await fetch(`/api/usuarios/${id}/cambiar-plan?nuevoPlanId=${encodeURIComponent(nuevoPlanId)}`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const t = await res.text();
-        throw new Error(`Error al cambiar plan: HTTP ${res.status} - ${t || "sin detalle"}`);
-      }
-      alert("Plan cambiado (SP_CAMBIAR_PLAN ejecutado). Vuelve a cargar el usuario para ver cambios.");
+      const res = await fetch(`/api/usuarios/${id}/cambiar-plan?nuevoPlanId=${encodeURIComponent(nuevoPlanId)}`, { method: "POST" });
+      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+      toast("✅ Plan cambiado exitosamente (SP_CAMBIAR_PLAN). Recarga el usuario.", "success");
     } catch (e) {
-      console.error(e);
-      alert(e.message);
+      toast(e.message, "error");
     }
   });
 
+  // Registration form
   $("registerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const msg = $("registerMsg");
-    msg.textContent = "";
 
     const payload = {
       nombreCompleto: $("nombreCompleto").value,
@@ -220,36 +248,37 @@ function wireUI() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`Error al registrar (HTTP ${res.status}): ${errText || "sin detalle"}`);
+        throw new Error(errText || `HTTP ${res.status}`);
       }
-
-      showMessage(msg, "Registro exitoso. Ya puedes navegar el catálogo.");
+      const data = await res.json();
+      
+      if (data && data.id) {
+        $("usuarioId").value = data.id;
+        msg.innerHTML = `✅ Registro exitoso. Tu ID asignado es <strong>${data.id}</strong> (se ha configurado automáticamente en la pestaña 'Usuarios').`;
+      } else {
+        msg.textContent = "✅ Registro exitoso. Ya puedes navegar el catálogo.";
+      }
+      
+      msg.className = "message success";
+      toast("🎉 Usuario registrado exitosamente!", "success");
       e.target.reset();
     } catch (err) {
-      console.error(err);
-      showMessage(msg, err.message, true);
+      msg.textContent = `❌ ${err.message}`;
+      msg.className = "message error";
+      toast(`Error al registrar: ${err.message}`, "error");
     }
   });
 
-  $("loadReportsBtn").addEventListener("click", () => {
-    loadReports().catch((e) => {
-      console.error(e);
-      $("repPopular").textContent = e.message;
-      $("repIngresos").textContent = e.message;
-    });
-  });
+  // Reports
+  $("loadReportsBtn").addEventListener("click", () => loadReports());
 
-  // Pantalla inicial: catálogo
+  // Initial load
   switchPage("catalogo");
-  loadCatalog().catch((e) => {
-    console.error(e);
-    $("catalogMeta").textContent = "";
-    showMessage($("registerMsg"), e.message, true);
-  });
+  loadCatalog();
+
+  toast("🎬 QuindioFlix cargado correctamente!", "success", 3000);
 }
 
 document.addEventListener("DOMContentLoaded", wireUI);
-

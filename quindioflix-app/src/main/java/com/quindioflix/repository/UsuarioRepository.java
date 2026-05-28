@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +18,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
 
     // 1. Integracion avanzada: Llamar a un Procedimiento Almacenado de Oracle (PL/SQL)
+    @Transactional
     @Procedure(procedureName = "SP_CAMBIAR_PLAN")
     void cambiarPlanSuscripcion(@Param("p_id_usuario") Long idUsuario, @Param("p_id_plan_nuevo") Long idPlanNuevo);
 
