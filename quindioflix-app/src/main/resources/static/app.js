@@ -232,20 +232,44 @@ function filtrarPorPerfil(contenidos) {
 }
 
 // ===== CATÁLOGO =====
+let catalogData = [];
+
 async function loadCatalog() {
     switchView('dashboard-view');
     try {
         const data = await apiFetch('/api/contenidos?size=40');
-        const lista = data.content || [];
-        const filtrados = filtrarPorPerfil(lista);
-        if (filtrados.length === 0) {
-            showToast('No hay títulos para este perfil', 'error');
-        }
-        renderCatalog(filtrados);
+        catalogData = data.content || [];
+        applyFilters();
     } catch (e) {
         showToast('Error cargando el catálogo', 'error');
     }
 }
+
+function applyFilters() {
+    let filtrados = filtrarPorPerfil(catalogData);
+    
+    const searchVal = (document.getElementById('search-filter')?.value || '').toLowerCase();
+    const catVal = document.getElementById('category-filter')?.value || '';
+    
+    if (searchVal) {
+        filtrados = filtrados.filter(c => c.titulo.toLowerCase().includes(searchVal));
+    }
+    
+    if (catVal) {
+        filtrados = filtrados.filter(c => c.nombreCategoria && c.nombreCategoria.includes(catVal));
+    }
+    
+    if (filtrados.length === 0 && (searchVal || catVal)) {
+        document.getElementById('catalog-grid').innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #aaa;">No se encontraron resultados para tu búsqueda.</p>';
+        return;
+    } else if (filtrados.length === 0) {
+        showToast('No hay títulos para este perfil', 'error');
+    }
+    renderCatalog(filtrados);
+}
+
+document.getElementById('search-filter')?.addEventListener('input', applyFilters);
+document.getElementById('category-filter')?.addEventListener('change', applyFilters);
 
 function renderCatalog(contenidos) {
     const grid = document.getElementById('catalog-grid');

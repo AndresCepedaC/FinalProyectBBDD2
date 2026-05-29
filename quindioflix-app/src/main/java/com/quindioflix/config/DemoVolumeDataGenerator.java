@@ -94,13 +94,14 @@ public class DemoVolumeDataGenerator {
         List<Contenido> creados = new ArrayList<>();
         for (int i = 0; i < 40; i++) {
             long catId = (i % 5) + 1;
+            Integer duracion = catId == 2 || catId == 5 ? null : 90 + (i % 50);
             Contenido c = Contenido.builder()
                     .categoria(categoriaRef(catId))
                     .publicador(publicador)
                     .titulo(titulos[i])
                     .anoLanzamiento(2020 + (i % 5))
-                    .duracionMinutos(catId == 2 || catId == 5 ? null : 90 + (i % 50))
-                    .sinopsis("Sinopsis de " + titulos[i] + " — produccion QuindioFlix.")
+                    .duracionMinutos(duracion)
+                    .sinopsis(generarSinopsis(titulos[i], catId, duracion))
                     .clasificacionEdad(edades[i % edades.length])
                     .esOriginal(i % 3 == 0 ? 1 : 0)
                     .popularidad(60 + (i % 40))
@@ -360,6 +361,24 @@ public class DemoVolumeDataGenerator {
             c.setGeneros(asignados);
             contenidoRepository.save(c);
             idx++;
+        }
+    }
+
+    private String generarSinopsis(String titulo, long catId, Integer duracion) {
+        String base = "Disfruta de '" + titulo + "', una producción de alta calidad pensada especialmente para ti. ";
+        switch ((int) catId) {
+            case 1:
+                return base + "Sumérgete en esta fascinante película con una historia atrapante, actuaciones estelares y una trama que te mantendrá al borde del asiento. Duración aproximada de " + duracion + " minutos, ideal para una noche de palomitas y entretenimiento continuo.";
+            case 2:
+                return base + "Acompaña a los personajes principales a lo largo de su viaje en esta espectacular serie. Actualmente cuenta con 2 emocionantes temporadas y un total de 8 episodios, repletos de drama, intriga y desarrollo profundo de historias. ¡Una maratón asegurada!";
+            case 3:
+                return base + "Explora la realidad a través de este documental único y revelador. Con imágenes exclusivas, testimonios impactantes y " + duracion + " minutos de duración, aprenderás sobre temas de gran relevancia mundial de una forma dinámica y educativa.";
+            case 4:
+                return base + "Déjate llevar por el ritmo y la pasión. Este especial musical incluye presentaciones exclusivas, entrevistas detrás de escena y material inédito. Son " + duracion + " minutos de pura energía sonora para deleitar tus oídos.";
+            case 5:
+                return base + "Sintoniza este podcast para escuchar debates interesantes y conversaciones enriquecedoras. Esta producción cuenta con 2 temporadas y 8 episodios llenos de conocimiento, reflexiones y anécdotas que no te puedes perder.";
+            default:
+                return base + "Un contenido imperdible para disfrutar en cualquier momento y en cualquier lugar.";
         }
     }
 }

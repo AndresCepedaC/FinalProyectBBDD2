@@ -52,7 +52,20 @@
         </header>
 
         <main class="catalog-container">
-            <h2>Populares en QuindioFlix</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <h2>Catálogo de QuindioFlix</h2>
+                <div class="filters" style="display: flex; gap: 10px;">
+                    <input type="text" id="search-filter" placeholder="Buscar título..." style="padding: 0.5rem; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff;">
+                    <select id="category-filter" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #555; background: #222; color: #fff;">
+                        <option value="">Todas las categorías</option>
+                        <option value="Peliculas">Películas</option>
+                        <option value="Series">Series</option>
+                        <option value="Documentales">Documentales</option>
+                        <option value="Musica">Música</option>
+                        <option value="Podcasts">Podcasts</option>
+                    </select>
+                </div>
+            </div>
             <div class="catalog-grid" id="catalog-grid">
                 <!-- Se inyectaran los contenidos -->
             </div>
