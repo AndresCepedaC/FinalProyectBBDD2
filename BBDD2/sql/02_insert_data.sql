@@ -68,6 +68,18 @@ BEGIN
 END;
 /
 
+-- Usuarios de prueba para trigger trg_validar_cuenta_reproduccion
+-- (sirven para validar que una cuenta no activa no pueda reproducir)
+UPDATE USUARIOS
+SET estado_cuenta = 'SUSPENDIDO',
+    fecha_ultimo_pago = ADD_MONTHS(SYSDATE, -2)
+WHERE email = 'usr.med.est4@email.com';
+
+UPDATE USUARIOS
+SET estado_cuenta = 'INACTIVO',
+    fecha_ultimo_pago = ADD_MONTHS(SYSDATE, -3)
+WHERE email = 'usr.arm.pre4@email.com';
+
 -- 4. PERFILES (minimo 50; varios usuarios con multiples perfiles)
 BEGIN
   FOR i IN 1..30 LOOP
@@ -147,6 +159,20 @@ BEGIN
   FOR i IN 1..5 LOOP
     INSERT INTO CONTENIDO (id_contenido, id_categoria, id_empleado_publicador, titulo, ano_lanzamiento, duracion_minutos, clasificacion_edad, es_original)
     VALUES (SEQ_CONTENIDO.NEXTVAL, 5, 2, 'Podcast Tech '||i, 2023, NULL, '+7', 1);
+  END LOOP;
+END;
+/
+
+-- Videos cortos servidos por la app Spring (static/videos/demo1-4.mp4)
+BEGIN
+  FOR i IN 1..45 LOOP
+    UPDATE CONTENIDO SET url_video = CASE MOD(i, 4)
+      WHEN 0 THEN '/videos/demo1.mp4'
+      WHEN 1 THEN '/videos/demo2.mp4'
+      WHEN 2 THEN '/videos/demo3.mp4'
+      ELSE '/videos/demo4.mp4'
+    END
+    WHERE id_contenido = i;
   END LOOP;
 END;
 /

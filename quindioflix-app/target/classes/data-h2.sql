@@ -64,3 +64,6 @@ INSERT INTO GENEROS (id_genero, nombre_genero) VALUES (8, 'Infantil');
 INSERT INTO DEPARTAMENTOS (id_departamento, nombre_departamento, id_empleado_jefe) VALUES (1, 'Tecnologia', NULL);
 INSERT INTO DEPARTAMENTOS (id_departamento, nombre_departamento, id_empleado_jefe) VALUES (2, 'Contenido', NULL);
 INSERT INTO EMPLEADOS (id_empleado, id_departamento, id_supervisor, nombre_empleado, email_empleado, rol_empleado, fecha_contratacion) VALUES (1, 2, NULL, 'Carlos Publicador', 'carlos@quindioflix.com', 'Editor de Contenido', DATE '2023-01-15');
+
+-- Permitir NULL en ID_PLAN para usuarios sin suscripción
+ALTER TABLE USUARIOS ALTER COLUMN id_plan DROP NOT NULL;

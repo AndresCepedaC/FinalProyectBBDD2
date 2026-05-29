@@ -181,6 +181,46 @@ body {
     transition: var(--transition);
 }
 .profile-card:hover .profile-name { color: white; }
+
+/* Botón eliminar perfil */
+.profile-card {
+    position: relative;
+}
+.profile-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--error-color);
+    color: #fff;
+    border: 2px solid var(--bg-color);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    transition: var(--transition);
+    line-height: 1;
+    padding: 0;
+}
+.profile-delete-btn:hover {
+    background: #ff2d38;
+    transform: scale(1.2);
+}
+.profile-card.managing .profile-avatar {
+    animation: profileShake 0.4s ease-in-out infinite alternate;
+    border-color: var(--error-color);
+}
+
+@keyframes profileShake {
+    0% { transform: rotate(-1deg); }
+    100% { transform: rotate(1deg); }
+}
+
 .infantil .profile-avatar { border: 2px solid #0071eb; }
 
 /* DASHBOARD */
@@ -444,6 +484,34 @@ body.modal-open {
 }
 .rating-section textarea { resize: vertical; min-height: 80px; }
 .rating-section button { margin-top: 15px; }
+.rating-hint {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin: 8px 0 12px;
+    line-height: 1.4;
+}
+.rating-hint code {
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.player-modal-content {
+    max-width: 900px;
+    width: 95%;
+}
+.player-video {
+    width: 100%;
+    max-height: 60vh;
+    background: #000;
+    border-radius: var(--border-radius);
+    margin: 16px 0;
+}
+.player-progress {
+    color: #ccc;
+    font-size: 0.95rem;
+}
 
 /* TABLA REPORTES */
 .table-responsive { overflow-x: auto; margin-top: 20px;}

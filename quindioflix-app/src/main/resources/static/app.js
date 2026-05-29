@@ -3,7 +3,10 @@ const state = {
     user: null, // { token, idUsuario, nombre, email, rol }
     perfiles: [],
     perfilActual: null, // { id, nombre, tipo }
-    contenidoActual: null // ID del contenido seleccionado en el modal
+    contenidoActual: null, // ID del contenido seleccionado en el modal
+    contenidoDetalle: null, // Detalle con urlVideo
+    avanceReproduccion: 0,
+    managingProfiles: false // Modo administrar perfiles (mostrar botones de eliminar)
 };
 
 // ===== UI HELPERS (TOASTS & VIEWS) =====
@@ -178,21 +181,124 @@ function renderProfiles() {
         const div = document.createElement('div');
         div.className = `profile-card ${p.tipo === 'INFANTIL' ? 'infantil' : ''}`;
         div.innerHTML = `
+            ${state.managingProfiles ? `<button class="profile-delete-btn" data-perfil-id="${p.id}" title="Eliminar perfil">&times;</button>` : ''}
             <div class="profile-avatar"></div>
             <div class="profile-name">${p.nombre}</div>
         `;
-        div.onclick = () => selectProfile(p);
+        if (state.managingProfiles) {
+            div.classList.add('managing');
+            // En modo administrar, al clicar la tarjeta no selecciona perfil
+            const deleteBtn = div.querySelector('.profile-delete-btn');
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteProfile(p);
+            };
+        } else {
+            div.onclick = () => selectProfile(p);
+        }
         grid.appendChild(div);
     });
+
+    // Botón de Añadir Perfil
+    const addDiv = document.createElement('div');
+    addDiv.className = 'profile-card';
+    addDiv.innerHTML = `
+        <div class="profile-avatar" style="background: #333; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #fff;">+</div>
+        <div class="profile-name">Añadir Perfil</div>
+    `;
+    addDiv.onclick = () => openModal(document.getElementById('create-profile-modal'));
+    grid.appendChild(addDiv);
+
+    // Botón Administrar / Listo
+    renderManageProfilesBtn();
+}
+
+// ===== LÓGICA DE CREACIÓN DE PERFILES =====
+document.getElementById('close-create-profile-modal').onclick = () => {
+    closeModal(document.getElementById('create-profile-modal'));
+};
+
+document.getElementById('create-profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btnSubmit = document.getElementById('btn-create-profile');
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "Creando...";
+
+    const payload = {
+        nombre: document.getElementById('new-profile-name').value,
+        tipo: document.getElementById('new-profile-type').value
+    };
+
+    try {
+        await apiFetch(`/api/usuarios/${state.user.idUsuario}/perfiles`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        showToast('Perfil creado exitosamente', 'success');
+        closeModal(document.getElementById('create-profile-modal'));
+        document.getElementById('create-profile-form').reset();
+        loadProfiles(); // Recargar perfiles
+    } catch (err) {
+        // El error ya es manejado y mostrado como toast por apiFetch, 
+        // pero podemos rehabilitar el botón
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Crear Perfil";
+    }
+});
+
+// ===== ELIMINAR PERFIL =====
+async function deleteProfile(perfil) {
+    const confirmacion = confirm(`¿Estás seguro de que deseas eliminar el perfil "${perfil.nombre}"? Esta acción no se puede deshacer.`);
+    if (!confirmacion) return;
+
+    try {
+        await apiFetch(`/api/usuarios/${state.user.idUsuario}/perfiles/${perfil.id}`, {
+            method: 'DELETE'
+        });
+        showToast(`Perfil "${perfil.nombre}" eliminado`, 'success');
+        loadProfiles(); // Recargar perfiles
+    } catch (err) {
+        // Error ya es manejado y mostrado como toast por apiFetch
+    }
+}
+
+// ===== TOGGLE ADMINISTRAR PERFILES =====
+function renderManageProfilesBtn() {
+    let existingBtn = document.getElementById('btn-manage-profiles');
+    if (existingBtn) existingBtn.remove();
+
+    const container = document.querySelector('.profiles-container');
+    if (!container || state.perfiles.length === 0) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'btn-manage-profiles';
+    btn.className = state.managingProfiles ? 'btn btn-primary mt-2' : 'btn btn-text mt-2';
+    btn.textContent = state.managingProfiles ? 'Listo' : 'Administrar Perfiles';
+    btn.style.marginLeft = '12px';
+    btn.onclick = () => {
+        state.managingProfiles = !state.managingProfiles;
+        renderProfiles();
+    };
+
+    // Insertar justo después del botón de cerrar sesión
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn && logoutBtn.parentNode) {
+        logoutBtn.parentNode.insertBefore(btn, logoutBtn.nextSibling);
+    } else {
+        container.appendChild(btn);
+    }
 }
 
 function selectProfile(perfil) {
     state.perfilActual = perfil;
+    state.managingProfiles = false; // Resetear modo administrar al seleccionar
     updateNav();
     loadCatalog();
 }
 
 document.getElementById('btn-switch-profile').addEventListener('click', () => {
+    state.managingProfiles = false; // Resetear modo administrar al cambiar perfil
     loadProfiles();
 });
 
@@ -298,6 +404,8 @@ const closeContentModalBtn = document.getElementById('close-modal');
 
 async function openContentModal(contenido) {
     state.contenidoActual = contenido.id;
+    state.contenidoDetalle = null;
+    state.avanceReproduccion = 0;
     document.getElementById('modal-title').textContent = contenido.titulo;
     document.getElementById('modal-poster').src = portadaDe(contenido);
     document.getElementById('modal-badges').innerHTML = '';
@@ -309,16 +417,28 @@ async function openContentModal(contenido) {
     openModal(modal);
 
     try {
-        const det = await apiFetch(`/api/contenidos/${contenido.id}`);
+        const url = state.perfilActual 
+            ? `/api/contenidos/${contenido.id}?idPerfil=${state.perfilActual.id}`
+            : `/api/contenidos/${contenido.id}`;
+        const det = await apiFetch(url);
         renderContentDetail(det);
     } catch (e) {
         document.getElementById('modal-desc').textContent = contenido.sinopsis || 'Sin descripción disponible.';
         document.getElementById('modal-meta').innerHTML =
             `<div class="meta-item"><span class="meta-label">Categoría</span><span>${contenido.nombreCategoria || '—'}</span></div>`;
+        
+        // Bloquear botón de reproducir si hay error de suscripción
+        const btnPlay = document.getElementById('btn-play');
+        if (btnPlay) {
+            btnPlay.disabled = true;
+            btnPlay.textContent = 'Suscripción no activa';
+            btnPlay.classList.add('btn-disabled');
+        }
     }
 }
 
 function renderContentDetail(det) {
+    state.contenidoDetalle = det;
     document.getElementById('modal-title').textContent = det.titulo;
     document.getElementById('modal-poster').src = det.urlPortada || portadaDe(det);
     document.getElementById('modal-desc').textContent = det.sinopsis || 'Sinopsis no disponible.';
@@ -369,28 +489,96 @@ function renderContentDetail(det) {
     } else {
         seriesBlock.classList.add('hidden');
     }
+
+    // Habilitar botón de reproducir si el detalle se cargó correctamente
+    const btnPlay = document.getElementById('btn-play');
+    if (btnPlay) {
+        btnPlay.disabled = false;
+        btnPlay.textContent = '▶ Reproducir';
+        btnPlay.classList.remove('btn-disabled');
+    }
 }
 
 closeContentModalBtn.onclick = () => closeModal(modal);
 
-// Simular Reproducción
+const playerModal = document.getElementById('player-modal');
+const playerVideo = document.getElementById('player-video');
+const playerProgress = document.getElementById('player-progress');
+
+document.getElementById('close-player-modal').onclick = () => {
+    playerVideo.pause();
+    closeModal(playerModal);
+};
+
+async function registrarReproduccion(porcentaje) {
+    if (!state.perfilActual || !state.contenidoActual) return;
+    const pct = Math.min(100, Math.max(0, Math.round(porcentaje)));
+    state.avanceReproduccion = Math.max(state.avanceReproduccion, pct);
+    await apiFetch('/api/contenidos/reproducir', {
+        method: 'POST',
+        body: JSON.stringify({
+            idPerfil: state.perfilActual.id,
+            idContenido: state.contenidoActual,
+            dispositivo: 'WEB',
+            porcentajeAvance: pct
+        })
+    });
+}
+
+function videoUrlDe(det) {
+    const id = det?.id || state.contenidoActual || 1;
+    if (det?.urlVideo && det.urlVideo.startsWith('/videos/')) {
+        return det.urlVideo;
+    }
+    const n = ((id - 1) % 4) + 1;
+    return `/videos/demo${n}.mp4`;
+}
+
+// Reproducir video real y registrar avance al terminar o superar 50%
 document.getElementById('btn-play').addEventListener('click', async () => {
     if (!state.perfilActual || !state.contenidoActual) return;
-    
-    try {
-        await apiFetch('/api/contenidos/reproducir', {
-            method: 'POST',
-            body: JSON.stringify({
-                idPerfil: state.perfilActual.id,
-                idContenido: state.contenidoActual,
-                dispositivo: 'WEB',
-                porcentajeAvance: Math.floor(Math.random() * 100) // Simular un avance aleatorio entre 0 y 100
-            })
-        });
-        showToast('Reproducción guardada en la base de datos', 'success');
-    } catch (e) {
-        // Error es manejado en apiFetch
-    }
+
+    const det = state.contenidoDetalle || { titulo: document.getElementById('modal-title').textContent };
+    const url = videoUrlDe(det);
+
+    document.getElementById('player-title').textContent = det.titulo || 'Reproduciendo';
+    playerProgress.textContent = 'Avance: 0%';
+    playerVideo.src = url;
+    playerVideo.currentTime = 0;
+    openModal(playerModal);
+
+    playerVideo.onerror = () => {
+        const fallback = '/videos/demo4.mp4';
+        if (!playerVideo.src.endsWith(fallback)) {
+            playerVideo.src = fallback;
+            showToast('Usando video de respaldo local', 'info');
+        } else {
+            showToast('No se pudo cargar el video. Recarga la página.', 'error');
+        }
+    };
+
+    playerVideo.onloadedmetadata = () => playerVideo.play().catch(() => {});
+
+    playerVideo.ontimeupdate = () => {
+        if (!playerVideo.duration) return;
+        const pct = Math.floor((playerVideo.currentTime / playerVideo.duration) * 100);
+        playerProgress.textContent = `Avance: ${pct}%`;
+        if (pct >= 50 && state.avanceReproduccion < 50) {
+            registrarReproduccion(50).then(() => {
+                showToast('Has visto el 50% — ya puedes calificar este título', 'success');
+            }).catch(() => {});
+        }
+    };
+
+    playerVideo.onended = async () => {
+        try {
+            await registrarReproduccion(95);
+            playerProgress.textContent = 'Avance: 95% — reproducción registrada';
+            showToast('Video completado. Reproducción guardada en la base de datos.', 'success');
+        } catch (e) {
+            // apiFetch muestra el error
+        }
+    };
 });
 
 // Simular Calificación (Provocará error de PL/SQL Trigger si porcentaje < 50%)

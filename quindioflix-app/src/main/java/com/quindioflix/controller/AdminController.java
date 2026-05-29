@@ -38,7 +38,7 @@ public class AdminController {
         Map<Long, String> ciudades = ciudadRepository.findAll().stream()
                 .collect(Collectors.toMap(Ciudad::getId, Ciudad::getNombreCiudad));
 
-        return usuarioRepository.findAllWithPlan().stream()
+        return usuarioRepository.findAll().stream()
                 .map(u -> toDto(u, ciudades))
                 .toList();
     }
@@ -85,7 +85,7 @@ public class AdminController {
                 .id(u.getId())
                 .nombreCompleto(u.getNombreCompleto())
                 .email(u.getEmail())
-                .plan(u.getPlan() != null ? u.getPlan().getNombrePlan() : "—")
+                .plan(u.getPlan() != null ? u.getPlan().getNombrePlan() : "NO TIENE SUSCRIPCION")
                 .idPlan(u.getPlan() != null ? u.getPlan().getId() : null)
                 .ciudad(ciudades.getOrDefault(u.getIdCiudad(), "—"))
                 .estadoCuenta(u.getEstadoCuenta())

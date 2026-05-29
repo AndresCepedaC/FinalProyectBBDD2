@@ -9,6 +9,7 @@ import com.quindioflix.repository.ContenidoRepository;
 import com.quindioflix.repository.EpisodioRepository;
 import com.quindioflix.repository.TemporadaRepository;
 import com.quindioflix.util.PortadasContenido;
+import com.quindioflix.util.VideosContenido;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +40,12 @@ public class ContenidoService {
                 .clasificacionEdad(c.getClasificacionEdad())
                 .nombreCategoria(c.getCategoria() != null ? c.getCategoria().getNombreCategoria() : null)
                 .urlPortada(PortadasContenido.urlPara(c.getId()))
+                .urlVideo(urlVideoDe(c))
                 .build();
+    }
+
+    private String urlVideoDe(Contenido c) {
+        return VideosContenido.normalizar(c.getUrlVideo(), c.getId());
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +95,7 @@ public class ContenidoService {
                 .estado(c.getEstado())
                 .esOriginal(c.getEsOriginal() != null && c.getEsOriginal() == 1)
                 .urlPortada(PortadasContenido.urlPara(c.getId()))
+                .urlVideo(urlVideoDe(c))
                 .build();
     }
 

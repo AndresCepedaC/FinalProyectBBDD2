@@ -2,6 +2,7 @@ package com.quindioflix.config;
 
 import com.quindioflix.model.*;
 import com.quindioflix.repository.*;
+import com.quindioflix.util.VideosContenido;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -72,6 +73,17 @@ public class DemoVolumeDataGenerator {
             catalogo = contenidoRepository.findAll();
         }
         asignarGenerosSiFaltan(catalogo);
+        asignarVideosSiFaltan(catalogo);
+    }
+
+    private void asignarVideosSiFaltan(List<Contenido> catalogo) {
+        for (Contenido c : catalogo) {
+            if (c.getUrlVideo() == null || c.getUrlVideo().isBlank()
+                    || !c.getUrlVideo().startsWith("/videos/")) {
+                c.setUrlVideo(VideosContenido.urlPara(c.getId()));
+                contenidoRepository.save(c);
+            }
+        }
     }
 
     private List<Contenido> ensureContenido(Empleado publicador) {
@@ -107,17 +119,34 @@ public class DemoVolumeDataGenerator {
                     .popularidad(60 + (i % 40))
                     .estado("ACTIVO")
                     .build();
-            creados.add(contenidoRepository.save(c));
+            Contenido guardado = contenidoRepository.save(c);
+            guardado.setUrlVideo(VideosContenido.urlPara(guardado.getId()));
+            creados.add(contenidoRepository.save(guardado));
         }
         return creados;
     }
 
     private List<Usuario> ensureUsuarios() {
+        // Siempre crear usuarios de prueba específicos
+        ensureUsuarioDemo("andres@demo.com", "Andres Cepeda Demo", 3L, 1L, "ACTIVO");
+        ensureUsuarioDemo("admin@demo.com", "Administrador QFlix", 3L, 1L, "ACTIVO");
+
+        // Usuarios suspendidos específicos para pruebas
+        ensureUsuarioDemo("suspendido1@demo.com", "Cliente Suspendido 1", 1L, 1L, "SUSPENDIDO");
+        ensureUsuarioDemo("suspendido2@demo.com", "Cliente Suspendido 2", 2L, 2L, "SUSPENDIDO");
+        ensureUsuarioDemo("suspendido3@demo.com", "Cliente Suspendido 3", 3L, 3L, "SUSPENDIDO");
+        ensureUsuarioDemo("suspendido4@demo.com", "Cliente Suspendido 4", 1L, 4L, "SUSPENDIDO");
+        ensureUsuarioDemo("suspendido5@demo.com", "Cliente Suspendido 5", 2L, 5L, "SUSPENDIDO");
+
+        // Usuarios sin plan específicos para pruebas
+        ensureUsuarioSinPlan("sinplan1@demo.com", "Cliente Sin Plan 1", 1L);
+        ensureUsuarioSinPlan("sinplan2@demo.com", "Cliente Sin Plan 2", 2L);
+        ensureUsuarioSinPlan("sinplan3@demo.com", "Cliente Sin Plan 3", 3L);
+
+        // Solo crear usuarios demo si no hay suficientes
         if (usuarioRepository.count() >= 30) {
             return usuarioRepository.findAll();
         }
-        ensureUsuarioDemo("andres@demo.com", "Andres Cepeda Demo", 3L, 1L, "ACTIVO");
-        ensureUsuarioDemo("admin@demo.com", "Administrador QFlix", 3L, 1L, "ACTIVO");
 
         // Distribucion ASIMETRICA: mas Basicos en Armenia, mas Premium en Medellin, etc.
         long[][] planPorCiudad = {
@@ -136,7 +165,8 @@ public class DemoVolumeDataGenerator {
             long ciudad = ciudades[i - 2];
             int idxCiudad = ciudad == 1 ? 0 : ciudad == 2 ? 1 : ciudad == 3 ? 2 : ciudad == 4 ? 3 : 4;
             long planId = planPorCiudad[idxCiudad][i % 6];
-            String estado = (i % 11 == 0) ? "SUSPENDIDO" : "ACTIVO";
+            // Aumentar frecuencia de usuarios suspendidos: 1 de cada 4 en lugar de 1 de cada 11
+            String estado = (i % 4 == 0) ? "SUSPENDIDO" : "ACTIVO";
             Usuario u = Usuario.builder()
                     .plan(planRef(planId))
                     .idCiudad(ciudad)
@@ -169,6 +199,24 @@ public class DemoVolumeDataGenerator {
                 .fechaRegistro(LocalDate.of(2024, 1, 1))
                 .estadoCuenta(estado)
                 .fechaUltimoPago(LocalDate.now())
+                .build();
+        usuarioRepository.save(u);
+    }
+
+    private void ensureUsuarioSinPlan(String email, String nombre, long ciudadId) {
+        if (usuarioRepository.findByEmail(email).isPresent()) {
+            return;
+        }
+        Usuario u = Usuario.builder()
+                .plan(null)
+                .idCiudad(ciudadId)
+                .nombreCompleto(nombre)
+                .email(email)
+                .contrasenaHash(HASH_123456)
+                .telefono("3000000000")
+                .fechaNacimiento(LocalDate.of(1990, 1, 1))
+                .fechaRegistro(LocalDate.of(2024, 1, 1))
+                .estadoCuenta("ACTIVO")
                 .build();
         usuarioRepository.save(u);
     }

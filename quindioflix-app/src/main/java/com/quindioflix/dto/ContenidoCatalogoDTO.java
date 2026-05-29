@@ -12,4 +12,5 @@ public class ContenidoCatalogoDTO {
     private String clasificacionEdad;
     private String nombreCategoria;
     private String urlPortada;
+    private String urlVideo;
 }

@@ -267,8 +267,14 @@ END SP_REPORTE_CONSUMO;
 -- 3.2.5 Disparadores (minimo 4)
 -- =====================================================
 
--- a) Trigger: Verificar que la cuenta este activa antes de reproducir
-CREATE OR REPLACE TRIGGER TRG_VERIFICAR_CUENTA_ACTIVA
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TRIGGER TRG_VERIFICAR_CUENTA_ACTIVA';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+-- a) Trigger: El candado del streaming (trg_validar_cuenta_reproduccion)
+CREATE OR REPLACE TRIGGER trg_validar_cuenta_reproduccion
 BEFORE INSERT ON REPRODUCCIONES
 FOR EACH ROW
 DECLARE
@@ -279,7 +285,7 @@ BEGIN
     JOIN PERFILES p ON u.id_usuario = p.id_usuario
     WHERE p.id_perfil = :NEW.id_perfil;
     
-    IF v_estado != 'ACTIVO' THEN
+    IF v_estado <> 'ACTIVO' THEN
         RAISE_APPLICATION_ERROR(-20003, 'No se puede reproducir contenido. La cuenta se encuentra en estado: ' || v_estado);
     END IF;
 END;
@@ -310,26 +316,53 @@ BEGIN
 END;
 /
 
--- c) Trigger: Verificar reproduccion antes de calificar
-CREATE OR REPLACE TRIGGER TRG_VERIFICAR_REPROD_CALIF
+-- c) Trigger: El guardian de las resenas (trg_validar_calificacion)
+-- Cruza la calificacion que se intenta insertar con el historial de reproducciones
+-- y la duracion del contenido antes de permitir la accion.
+CREATE OR REPLACE TRIGGER trg_validar_calificacion
 BEFORE INSERT ON CALIFICACIONES
 FOR EACH ROW
 DECLARE
-    v_avance_maximo NUMBER;
+    v_duracion_total    NUMBER;
+    v_minutos_vistos    NUMBER;
+    v_minimo_requerido  NUMBER;
 BEGIN
-    SELECT NVL(MAX(porcentaje_avance), 0) INTO v_avance_maximo
-    FROM REPRODUCCIONES
-    WHERE id_perfil = :NEW.id_perfil AND id_contenido = :NEW.id_contenido;
-    
-    IF v_avance_maximo < 50 THEN
-        RAISE_APPLICATION_ERROR(-20005, 'Debe reproducir al menos el 50% del contenido para poder calificarlo. Su avance maximo es: ' || v_avance_maximo || '%');
+    -- Duracion total del titulo (pelicula, documental, musica; series usan valor por defecto)
+    SELECT NVL(c.duracion_minutos, 45)
+    INTO v_duracion_total
+    FROM CONTENIDO c
+    WHERE c.id_contenido = :NEW.id_contenido;
+
+    -- Minutos equivalentes vistos = JOIN entre reproduccion e intento de calificacion
+    SELECT NVL(MAX(
+        (r.porcentaje_avance / 100) * NVL(c.duracion_minutos, 45)
+    ), 0)
+    INTO v_minutos_vistos
+    FROM REPRODUCCIONES r
+    INNER JOIN CONTENIDO c ON c.id_contenido = r.id_contenido
+    WHERE r.id_perfil = :NEW.id_perfil
+      AND r.id_contenido = :NEW.id_contenido;
+
+    v_minimo_requerido := v_duracion_total * 0.5;
+
+    IF v_minutos_vistos < v_minimo_requerido THEN
+        RAISE_APPLICATION_ERROR(-20005,
+            'Error: Debes ver al menos el 50% del contenido para poder calificarlo. ' ||
+            'Minutos vistos: ' || ROUND(v_minutos_vistos, 1) ||
+            ' / requeridos: ' || ROUND(v_minimo_requerido, 1));
     END IF;
 END;
 /
 
--- d) Trigger: Actualizar usuario al recibir un pago exitoso
-CREATE OR REPLACE TRIGGER TRG_PAGO_EXITOSO
-AFTER INSERT OR UPDATE ON PAGOS
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TRIGGER TRG_PAGO_EXITOSO';
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+-- d) Trigger: El reactivador automatico (trg_actualizar_estado_cuenta)
+CREATE OR REPLACE TRIGGER trg_actualizar_estado_cuenta
+AFTER INSERT ON PAGOS
 FOR EACH ROW
 WHEN (NEW.estado_pago = 'EXITOSO')
 BEGIN

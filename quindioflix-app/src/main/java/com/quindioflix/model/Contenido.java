@@ -58,6 +58,9 @@ public class Contenido extends BaseEntity {
     @Column(name = "popularidad")
     private Integer popularidad;
 
+    @Column(name = "url_video", length = 500)
+    private String urlVideo;
+
     @Column(name = "estado", length = 20)
     private String estado;
 

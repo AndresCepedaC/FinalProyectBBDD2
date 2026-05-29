@@ -74,7 +74,7 @@ public class AuthController {
                 .email(usuarioGuardado.getEmail())
                 .idCiudad(usuarioGuardado.getIdCiudad())
                 .estadoCuenta(usuarioGuardado.getEstadoCuenta())
-                .plan(usuarioGuardado.getPlan() != null ? usuarioGuardado.getPlan().getNombrePlan() : null)
+                .plan(usuarioGuardado.getPlan() != null ? usuarioGuardado.getPlan().getNombrePlan() : "NO TIENE SUSCRIPCION")
                 .build();
         
         return new ResponseEntity<>(out, HttpStatus.CREATED);

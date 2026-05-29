@@ -31,7 +31,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .addFilterBefore(fakeJwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/*.html", "/*.css", "/*.js", "/favicon.ico").permitAll()
+                .requestMatchers("/", "/*.html", "/*.css", "/*.js", "/favicon.ico", "/videos/**").permitAll()
                 .requestMatchers("/api/auth/**", "/api/public/**", "/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )

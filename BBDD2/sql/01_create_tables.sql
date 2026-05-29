@@ -301,6 +301,7 @@ CREATE TABLE CONTENIDO (
     fecha_agregado          DATE            DEFAULT SYSDATE,
     es_original             NUMBER(1)       DEFAULT 0,
     popularidad             NUMBER          DEFAULT 0,
+    url_video               VARCHAR2(500),
     estado                  VARCHAR2(20)    DEFAULT 'ACTIVO',
     -- Restricciones de dominio
     CONSTRAINT contenido_clasif_ck CHECK (clasificacion_edad IN ('TP', '+7', '+13', '+16', '+18')),
@@ -324,6 +325,7 @@ COMMENT ON COLUMN CONTENIDO.clasificacion_edad IS 'Clasificacion de edad: TP (To
 COMMENT ON COLUMN CONTENIDO.fecha_agregado IS 'Fecha en que el contenido fue agregado al catalogo';
 COMMENT ON COLUMN CONTENIDO.es_original IS 'Indica si es una produccion original de QuindioFlix (1=Si, 0=No)';
 COMMENT ON COLUMN CONTENIDO.popularidad IS 'Indice de popularidad calculado por cursor (reproducciones completas)';
+COMMENT ON COLUMN CONTENIDO.url_video IS 'URL del archivo de video (MP4) para reproduccion en la plataforma';
 COMMENT ON COLUMN CONTENIDO.estado IS 'Estado del contenido: ACTIVO, INACTIVO o EN_REVISION';
 
 -- =====================================================

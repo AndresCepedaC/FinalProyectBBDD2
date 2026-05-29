@@ -41,10 +41,37 @@ public class GlobalExceptionHandler {
                     cleanMessage = fullMessage.substring(colonIndex + 1).trim();
                 }
             }
+        } else if (fullMessage != null) {
+            // H2 stored procedure errors: extraer mensaje antes de "; SQL statement:"
+            int sqlStmtIdx = fullMessage.indexOf("; SQL statement:");
+            if (sqlStmtIdx != -1) {
+                cleanMessage = fullMessage.substring(0, sqlStmtIdx).trim();
+            }
+            // También limpiar causas anidadas de Hibernate
+            Throwable cause = ex.getCause();
+            while (cause != null) {
+                String causeMsg = cause.getMessage();
+                if (causeMsg != null) {
+                    int idx = causeMsg.indexOf("; SQL statement:");
+                    if (idx != -1) {
+                        cleanMessage = causeMsg.substring(0, idx).trim();
+                        break;
+                    }
+                    // Último recurso: mensaje plano de SQLException
+                    if (cause instanceof java.sql.SQLException) {
+                        cleanMessage = causeMsg.contains("; SQL") 
+                            ? causeMsg.substring(0, causeMsg.indexOf("; SQL")).trim() 
+                            : causeMsg;
+                        break;
+                    }
+                }
+                cause = cause.getCause();
+            }
         }
         
         Map<String, String> body = new HashMap<>();
         body.put("error", cleanMessage);
+        body.put("message", cleanMessage);
         
         return new ResponseEntity<>(body, HttpStatus.CONFLICT);
     }

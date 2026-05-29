@@ -41,10 +41,13 @@ public class DemoDataSeeder implements ApplicationRunner {
         if (usuarioRepository.count() < 30 || contenidoRepository.count() < 40) {
             volumeDataGenerator.generateIfNeeded();
         }
+        log.info("Regla 50%% calificaciones: CalificacionGuard (equivalente a trg_validar_calificacion).");
+
         log.info("Datos demo — usuarios:{}, perfiles:{}, contenido:{}, temporadas:{}, episodios:{}, " +
                         "reproducciones:{}, calificaciones:{}, pagos:{}, favoritos:{}",
                 usuarioRepository.count(), perfilRepository.count(), contenidoRepository.count(),
                 temporadaRepository.count(), episodioRepository.count(), reproduccionRepository.count(),
                 calificacionRepository.count(), pagoRepository.count(), favoritoRepository.count());
     }
+
 }

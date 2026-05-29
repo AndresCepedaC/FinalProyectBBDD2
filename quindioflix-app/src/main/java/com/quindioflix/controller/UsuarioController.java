@@ -1,6 +1,7 @@
 package com.quindioflix.controller;
 
 import com.quindioflix.dto.CambiarPlanPagoDTO;
+import com.quindioflix.dto.CrearPerfilDTO;
 import com.quindioflix.dto.PagoPlanResponseDTO;
 import com.quindioflix.dto.UsuarioPublicoDTO;
 import com.quindioflix.dto.UsuarioResumenDTO;
@@ -46,7 +47,7 @@ public class UsuarioController {
                         .email(u.getEmail())
                         .idCiudad(u.getIdCiudad())
                         .estadoCuenta(u.getEstadoCuenta())
-                        .plan(u.getPlan() != null ? u.getPlan().getNombrePlan() : null)
+                        .plan(u.getPlan() != null ? u.getPlan().getNombrePlan() : "NO TIENE SUSCRIPCION")
                         .build());
     }
 
@@ -66,7 +67,7 @@ public class UsuarioController {
                 .id(usuario.getId())
                 .nombreCompleto(usuario.getNombreCompleto())
                 .email(usuario.getEmail())
-                .plan(usuario.getPlan() != null ? usuario.getPlan().getNombrePlan() : null)
+                .plan(usuario.getPlan() != null ? usuario.getPlan().getNombrePlan() : "NO TIENE SUSCRIPCION")
                 .idPlan(usuario.getPlan() != null ? usuario.getPlan().getId() : null)
                 .ciudad(null) // simplificado, ciudad se maneja como id en la entidad
                 .estadoCuenta(usuario.getEstadoCuenta())
@@ -108,6 +109,14 @@ public class UsuarioController {
         Plan planNuevo = planRepository.findById(dto.getNuevoPlanId())
                 .orElseThrow(() -> new RuntimeException("Plan no encontrado"));
 
+        // Validar que el usuario no tenga más perfiles de los que permite el nuevo plan
+        int perfilesActuales = perfilRepository.countByUsuario_Id(id);
+        if (planNuevo.getMaxPerfiles() != null && perfilesActuales > planNuevo.getMaxPerfiles()) {
+            throw new RuntimeException(
+                "Tienes " + perfilesActuales + " perfiles activos. El plan " + planNuevo.getNombrePlan()
+                + " solo permite " + planNuevo.getMaxPerfiles() + ". Elimina perfiles antes de cambiar.");
+        }
+
         String planAnterior = usuario.getPlan() != null ? usuario.getPlan().getNombrePlan() : "—";
         String tarjetaLimpia = dto.getNumeroTarjeta().replaceAll("\\s", "");
         if (tarjetaLimpia.length() < 13) {
@@ -141,5 +150,66 @@ public class UsuarioController {
                 .mensaje("Pago aprobado. Plan actualizado a " + planNuevo.getNombrePlan())
                 .build());
     }
-}
 
+    @Transactional
+    @PostMapping("/{id}/perfiles")
+    public ResponseEntity<UsuarioResumenDTO.PerfilDTO> crearPerfil(@PathVariable Long id,
+                                                                   @Valid @RequestBody CrearPerfilDTO dto) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        
+        Plan plan = usuario.getPlan();
+        if (plan == null) {
+            throw new RuntimeException("El usuario no tiene un plan activo.");
+        }
+
+        int cantidadActual = perfilRepository.countByUsuario_Id(id);
+        if (cantidadActual >= plan.getMaxPerfiles()) {
+            throw new RuntimeException(
+                "Máximo de perfiles alcanzado. Tu plan " + plan.getNombrePlan()
+                + " permite hasta " + plan.getMaxPerfiles() + " perfiles.");
+        }
+
+        Perfil perfil = Perfil.builder()
+                .usuario(usuario)
+                .nombrePerfil(dto.getNombre())
+                .tipoPerfil(dto.getTipo())
+                .avatar("avatar.png") // Avatar por defecto
+                .build();
+        
+        perfil = perfilRepository.save(perfil);
+
+        UsuarioResumenDTO.PerfilDTO perfilRespuesta = UsuarioResumenDTO.PerfilDTO.builder()
+                .id(perfil.getId())
+                .nombre(perfil.getNombrePerfil())
+                .tipo(perfil.getTipoPerfil())
+                .build();
+
+        return ResponseEntity.ok(perfilRespuesta);
+    }
+
+    @Transactional
+    @DeleteMapping("/{id}/perfiles/{perfilId}")
+    public ResponseEntity<Void> eliminarPerfil(@PathVariable Long id,
+                                                @PathVariable Long perfilId) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        Perfil perfil = perfilRepository.findById(perfilId)
+                .orElseThrow(() -> new RuntimeException("Perfil no encontrado"));
+
+        // Validar que el perfil pertenece al usuario
+        if (!perfil.getUsuario().getId().equals(id)) {
+            throw new RuntimeException("Este perfil no pertenece a tu cuenta.");
+        }
+
+        // No dejar eliminar si solo queda 1 perfil
+        int cantidadActual = perfilRepository.countByUsuario_Id(id);
+        if (cantidadActual <= 1) {
+            throw new RuntimeException("Debes tener al menos un perfil activo.");
+        }
+
+        perfilRepository.delete(perfil);
+        return ResponseEntity.noContent().build();
+    }
+}

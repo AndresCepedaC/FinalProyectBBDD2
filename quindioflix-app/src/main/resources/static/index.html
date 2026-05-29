@@ -95,10 +95,23 @@
             
             <div class="rating-section">
                 <h3>Calificar este contenido</h3>
+                <p class="rating-hint">Debes ver al menos el 50% del video (botón Reproducir) antes de calificar. El trigger <code>trg_validar_calificacion</code> lo valida en la base de datos.</p>
                 <input type="number" id="rating-stars" min="1" max="5" placeholder="Estrellas (1-5)">
                 <textarea id="rating-review" placeholder="Escribe tu reseña..."></textarea>
                 <button id="btn-rate" class="btn btn-secondary">Enviar Calificación</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: REPRODUCTOR DE VIDEO -->
+    <div id="player-modal" class="modal hidden">
+        <div class="modal-content player-modal-content">
+            <span class="close-btn" id="close-player-modal">&times;</span>
+            <h2 id="player-title">Reproduciendo</h2>
+            <video id="player-video" class="player-video" controls playsinline preload="metadata">
+                Tu navegador no soporta reproducción de video.
+            </video>
+            <p id="player-progress" class="player-progress">Avance: 0%</p>
         </div>
     </div>
 
@@ -156,6 +169,30 @@
                     <button type="button" id="btn-checkout-done" class="btn btn-primary">Continuar</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREAR PERFIL -->
+    <div id="create-profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn" id="close-create-profile-modal">&times;</span>
+            <h2>Añadir Perfil</h2>
+            <form id="create-profile-form">
+                <div class="input-group">
+                    <label>Nombre del perfil</label>
+                    <input type="text" id="new-profile-name" required placeholder="Ej: Juan">
+                </div>
+                <div class="input-group">
+                    <label>Tipo de perfil</label>
+                    <select id="new-profile-type" required>
+                        <option value="ADULTO">Adulto</option>
+                        <option value="INFANTIL">Infantil</option>
+                    </select>
+                </div>
+                <div class="modal-actions" style="margin-top: 15px;">
+                    <button type="submit" id="btn-create-profile" class="btn btn-primary">Crear Perfil</button>
+                </div>
+            </form>
         </div>
     </div>
 

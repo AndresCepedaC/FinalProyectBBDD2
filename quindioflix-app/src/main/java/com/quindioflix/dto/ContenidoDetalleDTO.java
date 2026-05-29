@@ -26,6 +26,7 @@ public class ContenidoDetalleDTO {
     private String estado;
     private boolean esOriginal;
     private String urlPortada;
+    private String urlVideo;
 
     @Data
     @Builder

@@ -12,8 +12,10 @@ import com.quindioflix.repository.CalificacionRepository;
 import com.quindioflix.repository.ContenidoRepository;
 import com.quindioflix.repository.PerfilRepository;
 import com.quindioflix.repository.ReproduccionRepository;
+import com.quindioflix.service.CalificacionGuard;
 import com.quindioflix.service.ContenidoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -33,6 +35,7 @@ public class ContenidoController {
     private final CalificacionRepository calificacionRepository;
     private final PerfilRepository perfilRepository;
     private final ContenidoRepository contenidoRepository;
+    private final ObjectProvider<CalificacionGuard> calificacionGuard;
 
     @GetMapping
     public ResponseEntity<Page<ContenidoCatalogoDTO>> obtenerCatalogo(
@@ -46,7 +49,22 @@ public class ContenidoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ContenidoDetalleDTO> obtenerDetalle(@PathVariable Long id) {
+    public ResponseEntity<ContenidoDetalleDTO> obtenerDetalle(@PathVariable Long id,
+                                                               @RequestParam(required = false) Long idPerfil) {
+        if (idPerfil != null) {
+            Perfil perfil = perfilRepository.findById(idPerfil)
+                    .orElseThrow(() -> new RuntimeException("Perfil no encontrado"));
+            String estadoCuenta = perfil.getUsuario().getEstadoCuenta();
+            if (!"ACTIVO".equals(estadoCuenta)) {
+                if (estadoCuenta == null || estadoCuenta.isEmpty() || "SUSPENDIDO".equals(estadoCuenta)) {
+                    throw new RuntimeException("Tu suscripción no está activa. No puedes ver contenido en este momento.");
+                }
+                throw new RuntimeException("Tu cuenta se encuentra en estado: " + estadoCuenta + ". No puedes ver contenido en este momento.");
+            }
+            if (perfil.getUsuario().getPlan() == null) {
+                throw new RuntimeException("No tienes una suscripción activa. Por favor suscríbete a un plan para ver contenido.");
+            }
+        }
         return ResponseEntity.ok(contenidoService.obtenerDetalleContenido(id));
     }
 
@@ -56,6 +74,10 @@ public class ContenidoController {
                 .orElseThrow(() -> new RuntimeException("Perfil no encontrado"));
         Contenido contenido = contenidoRepository.findById(dto.getIdContenido())
                 .orElseThrow(() -> new RuntimeException("Contenido no encontrado"));
+
+        if (!"ACTIVO".equals(perfil.getUsuario().getEstadoCuenta())) {
+            throw new RuntimeException("No se puede reproducir contenido. La cuenta se encuentra en estado: " + perfil.getUsuario().getEstadoCuenta());
+        }
 
         Reproduccion rep = Reproduccion.builder()
                 .perfil(perfil)
@@ -76,6 +98,9 @@ public class ContenidoController {
                 .orElseThrow(() -> new RuntimeException("Perfil no encontrado"));
         Contenido contenido = contenidoRepository.findById(dto.getIdContenido())
                 .orElseThrow(() -> new RuntimeException("Contenido no encontrado"));
+
+        // Oracle: trg_validar_calificacion en BD. Demo: CalificacionGuard (misma regla con JOIN).
+        calificacionGuard.ifAvailable(g -> g.validarAntesDeCalificar(dto.getIdPerfil(), dto.getIdContenido()));
 
         Calificacion cal = Calificacion.builder()
                 .perfil(perfil)
